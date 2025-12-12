@@ -1,65 +1,176 @@
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+    <div className="bg-zinc-50 w-full">
+      {/* Navbar */}
+      <Navbar />
+
+      {/* MAIN CONTENT */}
+      <main className="max-w-7xl mx-auto px-4 py-10">
+
+        {/* -------------------- HERO SECTION -------------------- */}
+        <section className="grid md:grid-cols-2 gap-8 items-center mb-16">
+          {/* Text */}
+          <div>
+            <h1 className="text-4xl font-bold text-black leading-tight">
+              Buy & Sell <span className="text-blue-600">Second Hand</span>
+              <br /> Electronics Easily
+            </h1>
+
+            <p className="text-gray-600 mt-4 max-w-md">
+              Join thousands of Cambodians buying and selling quality pre-owned electronics.
+              Post your items in minutes and discover amazing deals every day.
+            </p>
+
+            <button className="mt-6 px-5 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 transition">
+              Get Started
+            </button>
+          </div>
+
+          {/* Hero Image */}
+          <div className="flex justify-center">
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              src="/images/hero.png"
+              alt="hero"
+              width={500}
+              height={400}
+              className="rounded-lg"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          </div>
+        </section>
+
+        <hr />
+
+        {/* -------------------- CATEGORIES -------------------- */}
+        <section className="mt-10">
+          <h2 className="text-xl font-semibold mb-6">Categories</h2>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+            {[
+              { name: "Phone", img: "/image/ipad.png" },
+              { name: "Tablets", img: "/image/pc.png" },
+              { name: "Computer", img: "/image/pc.png" },
+              { name: "Accessories", img: "/image/ass.png" },
+            ].map((c) => (
+              <div
+                key={c.name}
+                className="flex flex-col items-center gap-2 cursor-pointer"
+              >
+                <div className="w-24 h-24 flex items-center justify-center rounded-full border-2 border-blue-300">
+                  <Image src={c.img} alt={c.name} width={60} height={60} />
+                </div>
+                <p className="text-gray-700">{c.name}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* -------------------- PRODUCTS -------------------- */}
+            <section className="mt-12">
+  <h2 className="text-xl font-semibold mb-6">Products</h2>
+
+  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+
+    {[
+      {
+        id: 1,
+        name: "iPhone 15 Pro Max",
+        price: 1250,
+        location: "Phnom Penh",
+        condition: "Used",
+        img: "/image/iphone1.png",
+      },
+      {
+        id: 2,
+        name: "RGB Gaming Mouse",
+        price: 10,
+        location: "Phnom Penh",
+        condition: "Used",
+        img: "/image/iphone1.png",
+      },
+      {
+        id: 3,
+        name: "iPhone 14 Pro",
+        price: 899,
+        location: "Siem Reap",
+        condition: "Used",
+        img: "/image/iphone1.png",
+      },
+      {
+        id: 4,
+        name: "Gaming Mouse Wireless",
+        price: 15,
+        location: "Phnom Penh",
+        condition: "Brand New",
+        img: "/image/iphone1.png",
+      },
+      {
+        id: 5,
+        name: "Samsung Galaxy S22",
+        price: 650,
+        location: "Battambang",
+        condition: "Used",
+        img: "/image/iphone1.png",
+      },
+      {
+        id: 6,
+        name: "iPad Pro 11 2021",
+        price: 720,
+        location: "Phnom Penh",
+        condition: "Used",
+        img: "/image/iphone1.png",
+      },
+      {
+        id: 7,
+        name: "Office Mouse Wired",
+        price: 5,
+        location: "Takeo",
+        condition: "Used",
+        img: "/image/iphone1.png",
+      },
+      {
+        id: 8,
+        name: "iPhone 13 Mini",
+        price: 499,
+        location: "Kandal",
+        condition: "Used",
+        img: "/image/iphone1.png",
+      },
+    ].map((p) => (
+      <div
+        key={p.id}
+        className="p-4 border rounded-lg shadow-sm bg-white hover:shadow-md transition"
+      >
+        <Image
+          src={p.img}
+          alt={p.name}
+          width={300}
+          height={300}
+          className="rounded-md"
+        />
+
+        <h3 className="font-semibold mt-2 text-gray-900">{p.name}</h3>
+
+        <p className="text-sm text-gray-500">
+          {p.condition} • {p.location}
+        </p>
+
+        <p className="mt-2 font-semibold text-red-600">
+          Price: ${p.price}
+        </p>
+      </div>
+    ))}
+
+  </div>
+</section>
+
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
