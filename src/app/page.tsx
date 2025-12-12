@@ -33,7 +33,7 @@ export default function Home() {
           {/* Hero Image */}
           <div className="flex justify-center">
             <Image
-              src="/images/hero.png"
+              src="/image/bigpic.png"
               alt="hero"
               width={500}
               height={400}
