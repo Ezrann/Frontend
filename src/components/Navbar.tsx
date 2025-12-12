@@ -9,37 +9,53 @@ export default function Navbar() {
   return (
     <nav className="w-full bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-        {/* Logo */}
+        {/* Left: Logo */}
         <Link href="/" className="text-xl font-semibold text-blue-600">
           Second Hand
         </Link>
 
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-6">
+        {/* Center: Search Bar */}
+        <div className="hidden md:flex flex-1 justify-center px-6">
           <input
             type="text"
-            placeholder="Search"
-            className="border rounded-full px-4 py-1 focus:outline-none"
+            placeholder="Search products..."
+            className="w-full max-w-md border rounded-full px-4 py-2 focus:outline-none"
           />
+        </div>
 
-          <select className="border rounded-full px-3 py-1">
-            <option>Categories</option>
-          </select>
+        {/* Right: Links */}
+        <div className="hidden md:flex items-center gap-6">
+          {/* Categories + Products */}
+          <div className="flex items-center gap-6 mr-8">
+            <Link
+              href="/categories"
+              className="text-gray-700 hover:text-blue-600"
+            >
+              Categories
+            </Link>
 
-          <Link href="/cart" className="text-gray-600 hover:text-blue-600">
-            🛒
-          </Link>
+            <Link
+              href="/products"
+              className="text-gray-700 hover:text-blue-600"
+            >
+              Products
+            </Link>
+          </div>
 
-          <Link href="/profile" className="text-gray-600 hover:text-blue-600">
-            👤
-          </Link>
+          {/* Cart + Profile */}
+          <div className="flex items-center gap-4">
+            <Link href="/cart" className="text-gray-600 hover:text-blue-600">
+              🛒
+            </Link>
+
+            <Link href="/profile" className="text-gray-600 hover:text-blue-600">
+              👤
+            </Link>
+          </div>
         </div>
 
         {/* Mobile Menu Button */}
-        <button
-          className="md:hidden"
-          onClick={() => setOpen(!open)}
-        >
+        <button className="md:hidden" onClick={() => setOpen(!open)}>
           {open ? <X /> : <Menu />}
         </button>
       </div>
@@ -49,17 +65,25 @@ export default function Navbar() {
         <div className="md:hidden bg-white border-t px-4 pb-4">
           <input
             type="text"
-            placeholder="Search"
-            className="w-full border rounded-full px-4 py-1 mt-2 mb-3 focus:outline-none"
+            placeholder="Search products..."
+            className="w-full border rounded-full px-4 py-2 mt-3 mb-4 focus:outline-none"
           />
 
-          <select className="w-full border rounded-full px-3 py-2">
-            <option>Categories</option>
-          </select>
+          <div className="flex flex-col text-gray-700">
+            <Link href="/products" className="py-2">
+              Products
+            </Link>
 
-          <div className="flex flex-col mt-3 text-gray-600">
-            <Link href="/cart" className="py-2">🛒 Cart</Link>
-            <Link href="/profile" className="py-2">👤 Profile</Link>
+            <Link href="/categories" className="py-2">
+              Categories
+            </Link>
+
+            <Link href="/cart" className="py-2">
+              🛒 Cart
+            </Link>
+            <Link href="/profile" className="py-2">
+              👤 Profile
+            </Link>
           </div>
         </div>
       )}
