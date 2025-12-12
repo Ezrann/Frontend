@@ -31,8 +31,8 @@ const products = [
   },
 ];
 
-export default function ProductDetail({ params }) {
-  const product = products.find((p) => p.id == params.id);
+export default function ProductDetail({ params }: { params: { id: string } }) {
+  const product = products.find((p) => p.id === Number(params.id));
 
   if (!product) {
     return (

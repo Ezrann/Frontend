@@ -1,13 +1,10 @@
-import Navbar from "../components/Navbar";
+
 import Footer from "../components/Footer";
 import Image from "next/image";
 
 export default function Home() {
   return (
     <div className="bg-zinc-50 w-full">
-      {/* Navbar */}
-      <Navbar />
-
       {/* MAIN CONTENT */}
       <main className="max-w-7xl mx-auto px-4 py-10">
 
@@ -168,8 +165,6 @@ export default function Home() {
 </section>
 
       </main>
-
-      {/* Footer */}
       <Footer />
     </div>
   );
