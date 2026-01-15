@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "../../components/ProductCard";
-import { 
-  Search, 
-  Filter, 
-  X, 
-  ChevronLeft, 
+import {
+  Search,
+  Filter,
+  X,
+  ChevronLeft,
   ChevronRight,
   Package,
   DollarSign,
   Tag,
-  Loader2
+  Loader2,
 } from "lucide-react";
 
 interface ProductImage {
@@ -55,12 +55,14 @@ export default function ProductsPage() {
   const itemsPerPage = 6;
   const [page, setPage] = useState(1);
 
-  // Read search parameter from URL on mount
+  // Sync filters with URL query parameters (search, category)
   useEffect(() => {
     const searchParam = searchParams.get("search");
-    if (searchParam) {
-      setSearch(decodeURIComponent(searchParam));
-    }
+    const categoryParam = searchParams.get("category");
+
+    setSearch(searchParam ? decodeURIComponent(searchParam) : "");
+    setCategory(categoryParam ?? "");
+    setPage(1);
   }, [searchParams]);
 
   // ⭐ Fetch Categories (Dynamic)
@@ -129,8 +131,9 @@ export default function ProductsPage() {
   );
 
   // Check if any filters are active
-  const hasActiveFilters = search || category || condition || minPrice || maxPrice;
-  
+  const hasActiveFilters =
+    search || category || condition || minPrice || maxPrice;
+
   const clearFilters = () => {
     setSearch("");
     setCategory("");
@@ -292,8 +295,15 @@ export default function ProductsPage() {
             <div className="bg-white rounded-2xl shadow-lg p-4 mb-6 flex items-center justify-between">
               <div>
                 <p className="text-gray-600">
-                  Showing <span className="font-bold text-gray-900">{paginated.length}</span> of{" "}
-                  <span className="font-bold text-gray-900">{sorted.length}</span> products
+                  Showing{" "}
+                  <span className="font-bold text-gray-900">
+                    {paginated.length}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-bold text-gray-900">
+                    {sorted.length}
+                  </span>{" "}
+                  products
                 </p>
               </div>
               {hasActiveFilters && (
@@ -305,7 +315,10 @@ export default function ProductsPage() {
                   )}
                   {category && (
                     <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                      {categories.find(c => c.id.toString() === category)?.name}
+                      {
+                        categories.find((c) => c.id.toString() === category)
+                          ?.name
+                      }
                     </span>
                   )}
                 </div>
@@ -322,7 +335,9 @@ export default function ProductsPage() {
               /* Empty State */
               <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
                 <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No products found</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  No products found
+                </h3>
                 <p className="text-gray-600 mb-6">
                   {hasActiveFilters
                     ? "Try adjusting your filters to see more results"
@@ -358,33 +373,39 @@ export default function ProductsPage() {
                     </button>
 
                     <div className="flex items-center gap-2">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
-                        if (
-                          pageNum === 1 ||
-                          pageNum === totalPages ||
-                          (pageNum >= page - 1 && pageNum <= page + 1)
-                        ) {
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => setPage(pageNum)}
-                              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                page === pageNum
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-white border border-gray-300 hover:bg-gray-50 text-gray-700"
-                              }`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        } else if (
-                          pageNum === page - 2 ||
-                          pageNum === page + 2
-                        ) {
-                          return <span key={pageNum} className="px-2">...</span>;
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (pageNum) => {
+                          if (
+                            pageNum === 1 ||
+                            pageNum === totalPages ||
+                            (pageNum >= page - 1 && pageNum <= page + 1)
+                          ) {
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => setPage(pageNum)}
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                                  page === pageNum
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-white border border-gray-300 hover:bg-gray-50 text-gray-700"
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          } else if (
+                            pageNum === page - 2 ||
+                            pageNum === page + 2
+                          ) {
+                            return (
+                              <span key={pageNum} className="px-2">
+                                ...
+                              </span>
+                            );
+                          }
+                          return null;
                         }
-                        return null;
-                      })}
+                      )}
                     </div>
 
                     <button

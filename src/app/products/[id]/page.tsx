@@ -19,6 +19,7 @@ import {
   Eye,
   Trash2,
   X,
+  Phone,
 } from "lucide-react";
 
 interface ProductImage {
@@ -41,6 +42,7 @@ interface Product {
   views?: number;
   category_name?: string;
   seller_name?: string;
+  seller_phone?: string;
   images?: ProductImage[];
   created_at?: string;
   updated_at?: string;
@@ -543,7 +545,9 @@ export default function ProductDetail({
             </div>
 
             {/* Seller Information */}
-            {(product.seller_name || product.created_at) && (
+            {(product.seller_name ||
+              product.created_at ||
+              product.seller_phone) && (
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                   <User className="w-6 h-6 text-blue-600" />
@@ -558,6 +562,20 @@ export default function ProductDetail({
                         <p className="font-semibold text-gray-800">
                           {product.seller_name}
                         </p>
+                      </div>
+                    </div>
+                  )}
+                  {product.seller_phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Phone</p>
+                        <a
+                          href={`tel:${product.seller_phone}`}
+                          className="font-semibold text-blue-600 hover:underline"
+                        >
+                          {product.seller_phone}
+                        </a>
                       </div>
                     </div>
                   )}
