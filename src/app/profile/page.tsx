@@ -17,6 +17,10 @@ import {
   Camera,
   Upload,
 } from "lucide-react";
+import {
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  validatePasswordStrength,
+} from "../../lib/validation";
 
 interface UserData {
   id?: number;
@@ -51,6 +55,7 @@ const ProfilePage = () => {
     phone: string;
     avatar: string | null;
   } | null>(null);
+  const passwordStrengthError = password ? validatePasswordStrength(password) : null;
 
   // Helper function to safely parse JSON response
   const safeJsonParse = async (response: Response) => {
@@ -77,7 +82,7 @@ const ProfilePage = () => {
         }
 
         // Try primary endpoint first
-        let res = await fetch("http://localhost:5001/api/users/me", {
+        let res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -93,7 +98,7 @@ const ProfilePage = () => {
 
         // If primary endpoint fails, try alternative
         if (!res.ok) {
-          res = await fetch("http://localhost:5001/api/auth/me", {
+          res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
@@ -117,7 +122,7 @@ const ProfilePage = () => {
             setPhone(data.phone || "");
             // Set avatar preview if exists
             if (data.avatar) {
-              setAvatarPreview(`http://localhost:5001${data.avatar}`);
+              setAvatarPreview(`${process.env.NEXT_PUBLIC_API_URL}${data.avatar}`);
             } else {
               setAvatarPreview(null);
             }
@@ -190,9 +195,9 @@ const ProfilePage = () => {
 
     // Validate password if provided
     if (password) {
-      if (password.length < 6) {
+      if (passwordStrengthError) {
         setIsSubmitting(false);
-        return setError("Password must be at least 6 characters");
+        return setError(passwordStrengthError);
       }
       if (password !== confirmPassword) {
         setIsSubmitting(false);
@@ -243,7 +248,7 @@ const ProfilePage = () => {
           formData.append("avatar", avatarFile);
         }
 
-        res = await fetch("http://localhost:5001/api/users/me", {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -262,7 +267,7 @@ const ProfilePage = () => {
           updateData.password = password;
         }
 
-        res = await fetch("http://localhost:5001/api/users/me", {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -282,7 +287,7 @@ const ProfilePage = () => {
           setPhone(data.phone || "");
           // Update avatar preview
           if (data.avatar) {
-            setAvatarPreview(`http://localhost:5001${data.avatar}`);
+            setAvatarPreview(`${process.env.NEXT_PUBLIC_API_URL}${data.avatar}`);
           }
           // Clear file input
           setAvatarFile(null);
@@ -344,7 +349,7 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
           <p className="mt-6 text-gray-600 font-medium">
@@ -357,7 +362,7 @@ const ProfilePage = () => {
 
   if (error && !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-lg text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <X className="w-8 h-8 text-red-600" />
@@ -385,7 +390,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header with Profile Avatar */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6 relative overflow-hidden">
@@ -396,7 +401,7 @@ const ProfilePage = () => {
               <div className="relative">
                 {avatarPreview || user?.avatar ? (
                   <img
-                    src={avatarPreview || `http://localhost:5001${user?.avatar}`}
+                    src={avatarPreview || `${process.env.NEXT_PUBLIC_API_URL}${user?.avatar}`}
                     alt={user?.name || "Profile"}
                     className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
                     onError={(e) => {
@@ -409,7 +414,7 @@ const ProfilePage = () => {
                   />
                 ) : null}
                 <div
-                  className={`w-32 h-32 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg ${
+                  className={`w-32 h-32 bg-linear-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg ${
                     avatarPreview || user?.avatar ? "hidden" : ""
                   }`}
                 >
@@ -421,6 +426,7 @@ const ProfilePage = () => {
                     <input
                       type="file"
                       accept="image/*"
+                      aria-label="Upload profile picture"
                       onChange={handleAvatarChange}
                       className="hidden"
                     />
@@ -527,7 +533,7 @@ const ProfilePage = () => {
                     <UserIcon className="w-4 h-4" />
                     Full Name
                   </label>
-                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
+                  <div className="bg-linear-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
                     <p className="text-gray-800 font-medium">
                       {user?.name || "Not set"}
                     </p>
@@ -539,7 +545,7 @@ const ProfilePage = () => {
                     <Mail className="w-4 h-4" />
                     Email Address
                   </label>
-                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
+                  <div className="bg-linear-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
                     <p className="text-gray-800 font-medium">
                       {user?.email || "Not set"}
                     </p>
@@ -551,7 +557,7 @@ const ProfilePage = () => {
                     <Phone className="w-4 h-4" />
                     Phone Number
                   </label>
-                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
+                  <div className="bg-linear-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
                     <p className="text-gray-800 font-medium">
                       {user?.phone || "Not set"}
                     </p>
@@ -563,7 +569,7 @@ const ProfilePage = () => {
                     <Shield className="w-4 h-4" />
                     Account Role
                   </label>
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+                  <div className="bg-linear-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
                     <p className="text-blue-800 font-medium capitalize">
                       {user?.role || "user"}
                     </p>
@@ -605,12 +611,12 @@ const ProfilePage = () => {
                         />
                       ) : user?.avatar ? (
                         <img
-                          src={`http://localhost:5001${user.avatar}`}
+                          src={`${process.env.NEXT_PUBLIC_API_URL}${user.avatar}`}
                           alt="Current"
                           className="w-24 h-24 rounded-full object-cover border-4 border-blue-200"
                         />
                       ) : (
-                        <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-blue-200">
+                        <div className="w-24 h-24 bg-linear-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-blue-200">
                           {user?.name ? getInitials(user.name) : "U"}
                         </div>
                       )}
@@ -688,7 +694,7 @@ const ProfilePage = () => {
                     <Shield className="w-4 h-4" />
                     Account Role
                   </label>
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border-2 border-blue-200">
+                  <div className="bg-linear-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border-2 border-blue-200">
                     <p className="text-blue-800 font-medium capitalize">
                       {user?.role || "user"}
                     </p>
@@ -738,9 +744,9 @@ const ProfilePage = () => {
                         )}
                       </button>
                     </div>
-                    {password && password.length < 6 && (
+                    {password && passwordStrengthError && (
                       <p className="text-xs text-red-500">
-                        Password must be at least 6 characters
+                        {PASSWORD_REQUIREMENTS_MESSAGE}
                       </p>
                     )}
                   </div>
@@ -794,7 +800,7 @@ const ProfilePage = () => {
                       setEmail(user.email || "");
                       setPhone(user.phone || "");
                       if (user.avatar) {
-                        setAvatarPreview(`http://localhost:5001${user.avatar}`);
+                        setAvatarPreview(`${process.env.NEXT_PUBLIC_API_URL}${user.avatar}`);
                       } else {
                         setAvatarPreview(null);
                       }

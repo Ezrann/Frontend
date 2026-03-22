@@ -90,9 +90,9 @@ export default function AdminDashboard() {
 
       // If role not in localStorage, fetch from API
       if (!role) {
-        console.log("⚠️ Role not in localStorage, fetching from API...");
+        console.log("âš ï¸ Role not in localStorage, fetching from API...");
         try {
-          const profileRes = await fetch("http://localhost:5001/api/users/me", {
+          const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
               document.cookie = `role=${role}; path=/; max-age=${
                 7 * 24 * 60 * 60
               }; SameSite=Lax`;
-              console.log("✅ Role fetched from API and saved:", role);
+              console.log("âœ… Role fetched from API and saved:", role);
             }
           }
         } catch (err) {
@@ -131,7 +131,7 @@ export default function AdminDashboard() {
       console.log("Final admin check result:", isAdminRole);
 
       if (!isAdminRole) {
-        console.log("❌ Not an admin user, setting access denied...");
+        console.log("âŒ Not an admin user, setting access denied...");
         console.log("Current role value:", JSON.stringify(role));
         setAccessDenied(true);
         setIsAdmin(false);
@@ -140,7 +140,7 @@ export default function AdminDashboard() {
       }
 
       // User is admin
-      console.log("✅ User is admin, proceeding to fetch products...");
+      console.log("âœ… User is admin, proceeding to fetch products...");
       setIsAdmin(true);
       setAccessDenied(false);
       await fetchProducts();
@@ -169,9 +169,9 @@ export default function AdminDashboard() {
 
       // Fetch all products or filtered by status
       // Map frontend filter values to database status values
-      let url = "http://localhost:5001/api/products";
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/products`;
       if (filter !== "all") {
-        let dbStatus = filter;
+        let dbStatus: string = filter;
         if (filter === "approved") {
           dbStatus = "active";
         } else if (filter === "rejected") {
@@ -243,7 +243,7 @@ export default function AdminDashboard() {
       }
 
       const res = await fetch(
-        `http://localhost:5001/api/products/${deleteProductId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${deleteProductId}`,
         {
           method: "DELETE",
           headers: {
@@ -294,7 +294,7 @@ export default function AdminDashboard() {
       console.log("Updating product", productId, "to status:", status);
 
       const res = await fetch(
-        `http://localhost:5001/api/products/${productId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${productId}`,
         {
           method: "PUT",
           headers: {
@@ -354,7 +354,7 @@ export default function AdminDashboard() {
   const getImageUrl = (image: ProductImage | undefined) => {
     if (!image) return "/image/placeholder.png";
     if (image.url) return image.url;
-    if (image.path) return `http://localhost:5001/${image.path}`;
+    if (image.path) return `${process.env.NEXT_PUBLIC_API_URL}/${image.path}`;
     return "/image/placeholder.png";
   };
 
@@ -387,7 +387,7 @@ export default function AdminDashboard() {
   // Show access denied message
   if (accessDenied && !loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
           <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-800 mb-2">
@@ -400,7 +400,7 @@ export default function AdminDashboard() {
           <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left text-sm">
             <p className="font-semibold mb-2">Debug Info:</p>
             <p>
-              Token: {localStorage.getItem("token") ? "✓ Present" : "✗ Missing"}
+              Token: {localStorage.getItem("token") ? "âœ“ Present" : "âœ— Missing"}
             </p>
             <p>Role (localStorage): {localStorage.getItem("role") || "Not set"}</p>
             <p>Is Admin: {isAdmin ? "Yes" : "No"}</p>
@@ -414,7 +414,7 @@ export default function AdminDashboard() {
                 const token = localStorage.getItem("token");
                 if (token) {
                   try {
-                    const res = await fetch("http://localhost:5001/api/users/me", {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
                       headers: {
                         Authorization: `Bearer ${token}`,
                         "Content-Type": "application/json",
@@ -453,7 +453,7 @@ export default function AdminDashboard() {
 
   if (loading && products.length === 0 && !isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
           <p className="mt-6 text-gray-600 font-medium">Loading dashboard...</p>
@@ -463,7 +463,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
@@ -482,7 +482,7 @@ export default function AdminDashboard() {
                 </p>
                 <div className="text-xs text-gray-400 space-y-0.5">
                   <p>
-                    Debug: Token={localStorage.getItem("token") ? "✓" : "✗"},
+                    Debug: Token={localStorage.getItem("token") ? "âœ“" : "âœ—"},
                     Admin={isAdmin ? "Yes" : "No"}
                   </p>
                 </div>
@@ -765,6 +765,7 @@ export default function AdminDashboard() {
                   setError("");
                 }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close"
               >
                 <X className="w-6 h-6" />
               </button>

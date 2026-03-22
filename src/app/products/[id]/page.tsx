@@ -86,7 +86,7 @@ export default function ProductDetail({
         setLoading(true);
         setError("");
         const res = await fetch(
-          `http://localhost:5001/api/products/${resolvedParams.id}`
+          `${process.env.NEXT_PUBLIC_API_URL}/api/products/${resolvedParams.id}`
         );
 
         if (!res.ok) {
@@ -126,7 +126,7 @@ export default function ProductDetail({
       }
 
       try {
-        const res = await fetch("http://localhost:5001/api/wishlists", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wishlists`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -162,7 +162,7 @@ export default function ProductDetail({
 
     try {
       const res = await fetch(
-        `http://localhost:5001/api/wishlists/${product.id}/toggle`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/wishlists/${product.id}/toggle`,
         {
           method: "POST",
           headers: {
@@ -230,7 +230,7 @@ export default function ProductDetail({
       }
 
       const res = await fetch(
-        `http://localhost:5001/api/products/${product.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${product.id}`,
         {
           method: "DELETE",
           headers: {
@@ -267,7 +267,7 @@ export default function ProductDetail({
     if (!image) return "/image/placeholder.png";
     // Use url if available, otherwise construct from path
     if (image.url) return image.url;
-    return `http://localhost:5001/${image.path}`;
+    return `${process.env.NEXT_PUBLIC_API_URL}/${image.path}`;
   };
 
   const formatDate = (dateString?: string) => {

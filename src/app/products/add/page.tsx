@@ -62,14 +62,14 @@ export default function PostProductPage() {
 
       try {
         // Fetch categories
-        const catRes = await fetch("http://localhost:5001/api/categories");
+        const catRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
         if (catRes.ok) {
           const data = await catRes.json();
           setCategories(data);
         }
 
         // Fetch current user profile to prefill contact info
-        let profileRes = await fetch("http://localhost:5001/api/users/me", {
+        let profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -86,7 +86,7 @@ export default function PostProductPage() {
 
         // Fallback to auth endpoint if needed
         if (!profileRes.ok) {
-          profileRes = await fetch("http://localhost:5001/api/auth/me", {
+          profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
@@ -237,7 +237,7 @@ export default function PostProductPage() {
         formData.append("images", image);
       });
 
-      const res = await fetch("http://localhost:5001/api/products", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

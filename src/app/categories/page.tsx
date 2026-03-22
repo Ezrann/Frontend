@@ -19,7 +19,7 @@ export default function CategoriesPage() {
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const res = await fetch("http://localhost:5001/api/categories");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
         if (!res.ok) {
           throw new Error("Failed to load categories");
         }
@@ -130,7 +130,7 @@ export default function CategoriesPage() {
                     View products
                   </span>
                   <span className="group-hover:translate-x-1 transition-transform">
-                    →
+                    -&gt;
                   </span>
                 </div>
               </Link>

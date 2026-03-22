@@ -29,7 +29,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     if (!image) return "/image/placeholder.png";
     // Use url if available (full URL), otherwise construct from path
     if (image.url) return image.url;
-    if (image.path) return `http://localhost:5001/${image.path}`;
+    if (image.path) return `${process.env.NEXT_PUBLIC_API_URL}/${image.path}`;
     return "/image/placeholder.png";
   };
 
@@ -47,7 +47,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-200"
     >
       {/* Image Container */}
-      <div className="relative w-full h-56 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      <div className="relative w-full h-56 bg-linear-to-br from-gray-50 to-gray-100 overflow-hidden">
         <img
           src={imageUrl}
           alt={product.title}
@@ -67,7 +67,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </span>
         </div>
         {/* Hover Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
       {/* Content */}

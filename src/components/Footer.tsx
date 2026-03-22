@@ -7,9 +7,7 @@ export default function Footer() {
           Buy & Sell Used Electronics in Cambodia
         </p>
 
-        <p className="text-sm mt-4 opacity-90">
-          © 2025 All Rights Reserved.
-        </p>
+        <p className="text-sm mt-4 opacity-90">(c) 2025 All Rights Reserved.</p>
       </div>
     </footer>
   );

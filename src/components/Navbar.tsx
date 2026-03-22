@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation"; // Next.js 13+ router
-import { Menu, X, Shield, Heart } from "lucide-react";
+import { Menu, X, Shield, Heart, User } from "lucide-react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -147,7 +147,7 @@ export default function Navbar() {
             {isAdmin() && (
               <Link
                 href="/admin/dashboard"
-                className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all font-semibold flex items-center gap-2 shadow-md hover:shadow-lg"
+                className="px-5 py-2.5 bg-linear-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all font-semibold flex items-center gap-2 shadow-md hover:shadow-lg"
               >
                 <Shield className="w-5 h-5" />
                 Admin Dashboard
@@ -182,12 +182,13 @@ export default function Navbar() {
                 }
               }}
               className="text-gray-600 hover:text-blue-600"
+              aria-label="Open profile"
             >
-              👤
+              <User className="w-6 h-6" />
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 top-10 bg-white shadow-md border rounded-md w-auto py-2 px-4 z-20 flex flex-col gap-2 min-w-[120px]">
+              <div className="absolute right-0 top-10 bg-white shadow-md border rounded-md w-auto py-2 px-4 z-20 flex flex-col gap-2 min-w-30">
                 {isLoggedIn ? (
                   <>
                     <Link
@@ -269,7 +270,7 @@ export default function Navbar() {
               <Link
                 href="/admin/dashboard"
                 onClick={() => setOpen(false)}
-                className="py-2.5 text-left px-5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all font-semibold flex items-center gap-2 shadow-md"
+                className="py-2.5 text-left px-5 bg-linear-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all font-semibold flex items-center gap-2 shadow-md"
               >
                 <Shield className="w-5 h-5" />
                 Admin Dashboard

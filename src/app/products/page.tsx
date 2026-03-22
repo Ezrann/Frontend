@@ -65,11 +65,11 @@ export default function ProductsPage() {
     setPage(1);
   }, [searchParams]);
 
-  // ⭐ Fetch Categories (Dynamic)
+  // â­ Fetch Categories (Dynamic)
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const res = await fetch("http://localhost:5001/api/categories");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
         const data = await res.json();
         setCategories(data);
       } catch (error) {
@@ -79,11 +79,11 @@ export default function ProductsPage() {
     fetchCategories();
   }, []);
 
-  // ⭐ Fetch Products Based on Filters
+  // â­ Fetch Products Based on Filters
   useEffect(() => {
     async function fetchData() {
       try {
-        const url = new URL("http://localhost:5001/api/products");
+        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/products`);
 
         if (search) url.searchParams.append("q", search);
         if (category) url.searchParams.append("category", category);
@@ -102,7 +102,7 @@ export default function ProductsPage() {
     fetchData();
   }, [search, category, condition, minPrice, maxPrice]);
 
-  // ⭐ Local Sorting
+  // â­ Local Sorting
   const sorted = [...products].sort((a, b) => {
     if (sortBy === "az") return a.title.localeCompare(b.title);
     if (sortBy === "za") return b.title.localeCompare(a.title);
@@ -123,7 +123,7 @@ export default function ProductsPage() {
     return 0;
   });
 
-  // ⭐ Pagination
+  // â­ Pagination
   const totalPages = Math.ceil(sorted.length / itemsPerPage);
   const paginated = sorted.slice(
     (page - 1) * itemsPerPage,
@@ -280,8 +280,8 @@ export default function ProductsPage() {
                   onChange={(e) => setSortBy(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                 >
-                  <option value="az">Name A–Z</option>
-                  <option value="za">Name Z–A</option>
+                  <option value="az">Name A-Z</option>
+                  <option value="za">Name Z-A</option>
                   <option value="low">Price: Low to High</option>
                   <option value="high">Price: High to Low</option>
                 </select>

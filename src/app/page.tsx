@@ -20,12 +20,15 @@ interface Product {
 }
 
 async function getProducts(): Promise<Product[]> {
-  const res = await fetch("http://localhost:5001/api/products", {
-    cache: "no-store",
-  });
-
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
 }
 
 export default async function Home() {
@@ -78,7 +81,7 @@ export default async function Home() {
               className="text-blue-600 hover:text-blue-700 font-medium transition-colors flex items-center gap-1"
             >
               See All
-              <span className="text-sm">→</span>
+              <span className="text-sm">-&gt;</span>
             </Link>
           </div>
 
