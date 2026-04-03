@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Tag, Package } from "lucide-react";
+import { Package } from "lucide-react";
+import { useTranslation } from "../context/LanguageContext";
 
 interface ProductImage {
   id?: number;
@@ -24,6 +25,8 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { t } = useTranslation();
+
   // Helper function to get image URL
   const getImageUrl = (image: ProductImage | undefined) => {
     if (!image) return "/image/placeholder.png";
@@ -40,6 +43,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   const price = typeof product.price === "string" 
     ? parseFloat(product.price).toFixed(2) 
     : product.price;
+  const conditionLabel =
+    product.product_condition === "new" || product.product_condition === "unused"
+      ? t("product.new")
+      : t("product.used");
 
   return (
     <Link
@@ -63,7 +70,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               ? "bg-green-500/90 text-white"
               : "bg-blue-500/90 text-white"
           }`}>
-            {product.product_condition === "new" || product.product_condition === "unused" ? "New" : "Used"}
+            {conditionLabel}
           </span>
         </div>
         {/* Hover Overlay */}
@@ -79,13 +86,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Category */}
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
           <Package className="w-4 h-4" />
-          <span className="capitalize">{product.category_name || "Uncategorized"}</span>
+          <span className="capitalize">
+            {product.category_name || t("product.uncategorized")}
+          </span>
         </div>
 
         {/* Price */}
         <div className="flex items-baseline justify-between mt-4 pt-4 border-t border-gray-100">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Price</p>
+            <p className="text-xs text-gray-500 mb-1">{t("product.price")}</p>
             <p className="text-2xl font-bold text-blue-600">
               ${price}
             </p>

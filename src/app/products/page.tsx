@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "../../components/ProductCard";
+import { useTranslation } from "../../context/LanguageContext";
 import {
   Search,
   Filter,
@@ -11,8 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Package,
-  DollarSign,
-  Tag,
   Loader2,
 } from "lucide-react";
 
@@ -42,30 +40,21 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
 
-  // Filters
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
+  const [search, setSearch] = useState(() => {
+    const searchParam = searchParams.get("search");
+    return searchParam ? decodeURIComponent(searchParam) : "";
+  });
+  const [category, setCategory] = useState(() => searchParams.get("category") ?? "");
   const [condition, setCondition] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [sortBy, setSortBy] = useState("az");
 
-  // Pagination
   const itemsPerPage = 6;
   const [page, setPage] = useState(1);
 
-  // Sync filters with URL query parameters (search, category)
-  useEffect(() => {
-    const searchParam = searchParams.get("search");
-    const categoryParam = searchParams.get("category");
-
-    setSearch(searchParam ? decodeURIComponent(searchParam) : "");
-    setCategory(categoryParam ?? "");
-    setPage(1);
-  }, [searchParams]);
-
-  // â­ Fetch Categories (Dynamic)
   useEffect(() => {
     async function fetchCategories() {
       try {
@@ -79,7 +68,6 @@ export default function ProductsPage() {
     fetchCategories();
   }, []);
 
-  // â­ Fetch Products Based on Filters
   useEffect(() => {
     async function fetchData() {
       try {
@@ -102,7 +90,6 @@ export default function ProductsPage() {
     fetchData();
   }, [search, category, condition, minPrice, maxPrice]);
 
-  // â­ Local Sorting
   const sorted = [...products].sort((a, b) => {
     if (sortBy === "az") return a.title.localeCompare(b.title);
     if (sortBy === "za") return b.title.localeCompare(a.title);
@@ -123,14 +110,12 @@ export default function ProductsPage() {
     return 0;
   });
 
-  // â­ Pagination
   const totalPages = Math.ceil(sorted.length / itemsPerPage);
   const paginated = sorted.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
 
-  // Check if any filters are active
   const hasActiveFilters =
     search || category || condition || minPrice || maxPrice;
 
@@ -146,24 +131,20 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Browse Products
+            {t("productsPage.title")}
           </h1>
-          <p className="text-gray-600">
-            Discover amazing second-hand electronics in Cambodia
-          </p>
+          <p className="text-gray-600">{t("productsPage.subtitle")}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* ---- FILTER SIDEBAR ---- */}
           <aside className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6 sticky top-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-xl text-gray-900 flex items-center gap-2">
                   <Filter className="w-5 h-5 text-blue-600" />
-                  Filters
+                  {t("productsPage.filters")}
                 </h2>
                 {hasActiveFilters && (
                   <button
@@ -171,21 +152,20 @@ export default function ProductsPage() {
                     className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
                   >
                     <X className="w-4 h-4" />
-                    Clear
+                    {t("productsPage.clear")}
                   </button>
                 )}
               </div>
 
-              {/* Search */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Search
+                  {t("productsPage.search")}
                 </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search products..."
+                    placeholder={t("nav.searchPlaceholder")}
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -196,10 +176,9 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              {/* Category */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Category
+                  {t("productsPage.category")}
                 </label>
                 <select
                   value={category}
@@ -209,7 +188,7 @@ export default function ProductsPage() {
                   }}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                 >
-                  <option value="">All Categories</option>
+                  <option value="">{t("productsPage.allCategories")}</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -218,10 +197,9 @@ export default function ProductsPage() {
                 </select>
               </div>
 
-              {/* Condition */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Condition
+                  {t("productsPage.condition")}
                 </label>
                 <select
                   value={condition}
@@ -231,22 +209,21 @@ export default function ProductsPage() {
                   }}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                 >
-                  <option value="">Any Condition</option>
-                  <option value="new">New</option>
-                  <option value="used">Used</option>
+                  <option value="">{t("productsPage.anyCondition")}</option>
+                  <option value="new">{t("product.new")}</option>
+                  <option value="used">{t("product.used")}</option>
                 </select>
               </div>
 
-              {/* Price Range */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Price Range
+                  {t("productsPage.priceRange")}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <input
                       type="number"
-                      placeholder="Min"
+                      placeholder={t("productsPage.min")}
                       value={minPrice}
                       onChange={(e) => {
                         setMinPrice(e.target.value);
@@ -258,7 +235,7 @@ export default function ProductsPage() {
                   <div>
                     <input
                       type="number"
-                      placeholder="Max"
+                      placeholder={t("productsPage.max")}
                       value={maxPrice}
                       onChange={(e) => {
                         setMaxPrice(e.target.value);
@@ -270,47 +247,39 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              {/* Sort */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Sort By
+                  {t("productsPage.sortBy")}
                 </label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                 >
-                  <option value="az">Name A-Z</option>
-                  <option value="za">Name Z-A</option>
-                  <option value="low">Price: Low to High</option>
-                  <option value="high">Price: High to Low</option>
+                  <option value="az">{t("productsPage.nameAz")}</option>
+                  <option value="za">{t("productsPage.nameZa")}</option>
+                  <option value="low">{t("productsPage.priceLowHigh")}</option>
+                  <option value="high">{t("productsPage.priceHighLow")}</option>
                 </select>
               </div>
             </div>
           </aside>
 
-          {/* ---- PRODUCT GRID ---- */}
           <div className="lg:col-span-3">
-            {/* Results Header */}
             <div className="bg-white rounded-2xl shadow-lg p-4 mb-6 flex items-center justify-between">
               <div>
                 <p className="text-gray-600">
-                  Showing{" "}
-                  <span className="font-bold text-gray-900">
-                    {paginated.length}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-bold text-gray-900">
-                    {sorted.length}
-                  </span>{" "}
-                  products
+                  {t("productsPage.showing", {
+                    shown: paginated.length,
+                    total: sorted.length,
+                  })}
                 </p>
               </div>
               {hasActiveFilters && (
                 <div className="flex items-center gap-2 flex-wrap">
                   {search && (
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                      Search: {search}
+                      {t("productsPage.activeSearch", { search })}
                     </span>
                   )}
                   {category && (
@@ -325,30 +294,28 @@ export default function ProductsPage() {
               )}
             </div>
 
-            {/* Loading State */}
             {loading ? (
               <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
                 <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-                <p className="text-gray-600 font-medium">Loading products...</p>
+                <p className="text-gray-600 font-medium">{t("productsPage.loading")}</p>
               </div>
             ) : paginated.length === 0 ? (
-              /* Empty State */
               <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
                 <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  No products found
+                  {t("productsPage.emptyTitle")}
                 </h3>
                 <p className="text-gray-600 mb-6">
                   {hasActiveFilters
-                    ? "Try adjusting your filters to see more results"
-                    : "Check back later for new products"}
+                    ? t("productsPage.emptyFiltered")
+                    : t("productsPage.emptyDefault")}
                 </p>
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
                     className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                   >
-                    Clear All Filters
+                    {t("productsPage.clearAll")}
                   </button>
                 )}
               </div>
@@ -360,7 +327,6 @@ export default function ProductsPage() {
                   ))}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="mt-8 flex items-center justify-center gap-2">
                     <button
@@ -369,7 +335,7 @@ export default function ProductsPage() {
                       className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
                     >
                       <ChevronLeft className="w-4 h-4" />
-                      Previous
+                      {t("productsPage.previous")}
                     </button>
 
                     <div className="flex items-center gap-2">
@@ -413,7 +379,7 @@ export default function ProductsPage() {
                       onClick={() => setPage(page + 1)}
                       className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
                     >
-                      Next
+                      {t("productsPage.next")}
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
