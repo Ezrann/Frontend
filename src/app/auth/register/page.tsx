@@ -1,25 +1,26 @@
 "use client";
-import React, { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeClosed } from "lucide-react";
+import { Eye, EyeClosed, Lock, Mail, Phone, ShieldCheck, User } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   PASSWORD_REQUIREMENTS_MESSAGE,
   validatePasswordStrength,
 } from "../../../lib/validation";
 import {
-  loadGoogleScript,
-  initializeGoogleSignIn,
   decodeGoogleResponse,
   handleGoogleLogin,
+  initializeGoogleSignIn,
+  loadGoogleScript,
 } from "../../../lib/google-auth";
 import { useTranslation } from "../../../context/LanguageContext";
 
-const RegisterPage = () => {
+export default function RegisterPage() {
   const router = useRouter();
   const { t } = useTranslation();
-
   const [name, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -28,54 +29,52 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleGoogleSignUp = async (response: { credential: string }) => {
-    try {
-      const decoded = decodeGoogleResponse(response.credential);
-
-      if (!decoded) {
-        toast.error(t("auth.decodeFailed"));
-        return;
-      }
-
-      const result = await handleGoogleLogin({
-        id: decoded.id,
-        email: decoded.email,
-        name: decoded.name,
-        picture: decoded.picture,
-      });
-
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
-
-      toast.success(t("auth.googleSignupSuccess"));
-
-      setTimeout(() => {
-        router.push("/");
-      }, 1000);
-    } catch (error) {
-      console.error("Google sign-up error:", error);
-      toast.error(t("auth.googleSignupFailed"));
-    }
-  };
-
   useEffect(() => {
+    async function handleGoogleSignUp(response: { credential: string }) {
+      try {
+        const decoded = decodeGoogleResponse(response.credential);
+
+        if (!decoded) {
+          toast.error(t("auth.decodeFailed"));
+          return;
+        }
+
+        const result = await handleGoogleLogin({
+          id: decoded.id,
+          email: decoded.email,
+          name: decoded.name,
+          picture: decoded.picture,
+        });
+
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success(t("auth.googleSignupSuccess"));
+
+        window.setTimeout(() => {
+          router.push("/");
+        }, 1000);
+      } catch (error) {
+        console.error("Google sign-up error:", error);
+        toast.error(t("auth.googleSignupFailed"));
+      }
+    }
+
     loadGoogleScript();
 
-    const checkGoogleLoaded = setInterval(() => {
+    const checkGoogleLoaded = window.setInterval(() => {
       if (typeof window !== "undefined" && window.google) {
-        clearInterval(checkGoogleLoaded);
-        initializeGoogleSignIn(
-          "google-register-button",
-          handleGoogleSignUp,
-          () => console.log(t("auth.googlePromptClosed"))
+        window.clearInterval(checkGoogleLoaded);
+        initializeGoogleSignIn("google-register-button", handleGoogleSignUp, () =>
+          console.log(t("auth.googlePromptClosed"))
         );
       }
     }, 100);
 
-    return () => clearInterval(checkGoogleLoaded);
-  }, [handleGoogleSignUp, t]);
+    return () => window.clearInterval(checkGoogleLoaded);
+  }, [router, t]);
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -100,11 +99,13 @@ const RegisterPage = () => {
       toast.error(t("auth.passwordRequired"));
       return;
     }
+
     const passwordValidationError = validatePasswordStrength(password);
     if (passwordValidationError) {
       toast.error(passwordValidationError);
       return;
     }
+
     if (password !== confirmPassword) {
       toast.error(t("auth.passwordMismatch"));
       return;
@@ -125,22 +126,27 @@ const RegisterPage = () => {
 
       let data;
       const contentType = res.headers.get("content-type");
+
       if (contentType && contentType.includes("application/json")) {
         data = await res.json();
       } else {
-        toast.error(`${t("auth.registrationFailed")}: ${res.status} ${res.statusText}`);
+        toast.error(
+          `${t("auth.registrationFailed")}: ${res.status} ${res.statusText}`
+        );
         return;
       }
 
       if (!res.ok) {
         const errorMessage =
-          data.message || data.error || `${t("auth.registrationFailed")} (${res.status})`;
+          data.message ||
+          data.error ||
+          `${t("auth.registrationFailed")} (${res.status})`;
         toast.error(errorMessage);
         return;
       }
 
       toast.success(data.message || t("auth.accountCreated"));
-      setTimeout(() => router.push("/auth/login"), 1200);
+      window.setTimeout(() => router.push("/auth/login"), 1200);
     } catch (error) {
       console.error("Registration error:", error);
       const errorMessage =
@@ -149,164 +155,228 @@ const RegisterPage = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
-      <div className="max-w-6xl w-full grid md:grid-cols-2 gap-8 items-center bg-white p-8 md:p-16 rounded-xl shadow-sm">
-        <div className="hidden md:flex justify-center items-center">
-          <div className="relative w-full aspect-square max-w-lg">
-            <img
-              src="/images/image.png"
-              alt="Marketplace Illustration"
-              className="object-contain w-full h-full"
-            />
-          </div>
-        </div>
+  const passwordHasError = Boolean(password && validatePasswordStrength(password));
 
-        <div className="w-full max-w-md mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-blue-600 mb-2">
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dbeafe,_#f8fafc_55%)] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_30px_80px_rgba(30,64,175,0.15)] lg:grid-cols-[1.02fr_0.98fr]">
+        <section className="relative hidden overflow-hidden bg-[linear-gradient(160deg,#eff6ff_0%,#dbeafe_45%,#bfdbfe_100%)] px-10 py-12 text-slate-900 lg:flex lg:flex-col lg:justify-between">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.85),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.12),_transparent_32%)]" />
+
+          <div className="relative max-w-md">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-4 py-2 text-sm font-medium text-blue-700 backdrop-blur-sm">
+              <ShieldCheck className="h-4 w-4" />
+              <span>{t("nav.register")}</span>
+            </div>
+            <h1 className="text-4xl font-semibold leading-tight text-slate-900">
               {t("auth.createAccount")}
             </h1>
-            <p className="text-gray-500 text-sm">{t("auth.registerSubtitle")}</p>
+            <p className="mt-4 text-base leading-7 text-slate-600">
+              Join the marketplace and start posting products in just a few
+              simple steps.
+            </p>
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="text-sm font-semibold text-gray-700">
-                {t("auth.fullName")}
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder={t("auth.enterFullName")}
-                className="w-full px-4 py-3 rounded-lg border border-blue-100 focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold text-gray-700">
-                {t("auth.email")}
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("auth.enterEmail")}
-                className="w-full px-4 py-3 rounded-lg border border-blue-100 focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold text-gray-700">
-                {t("auth.phoneNumber")}
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder={t("auth.enterPhone")}
-                className="w-full px-4 py-3 rounded-lg border border-blue-100 focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold text-gray-700">
-                {t("auth.password")}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t("auth.enterPassword")}
-                  className="w-full px-4 py-3 pr-12 rounded-lg border border-blue-100 focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  aria-label={
-                    showPassword ? t("auth.hidePassword") : t("auth.showPassword")
-                  }
-                >
-                  {showPassword ? (
-                    <EyeClosed className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-              {password && validatePasswordStrength(password) && (
-                <p className="mt-1 text-xs text-red-500">
-                  {PASSWORD_REQUIREMENTS_MESSAGE}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold text-gray-700">
-                {t("auth.confirmPassword")}
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder={t("auth.retypePassword")}
-                  className="w-full px-4 py-3 pr-12 rounded-lg border border-blue-100 focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  aria-label={
-                    showConfirmPassword
-                      ? t("auth.hideConfirmPassword")
-                      : t("auth.showConfirmPassword")
-                  }
-                >
-                  {showConfirmPassword ? (
-                    <EyeClosed className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-lg shadow-lg shadow-blue-100 transition-colors mt-6"
-            >
-              {t("nav.register")}
-            </button>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">{t("auth.orSignUpWith")}</span>
-              </div>
-            </div>
-
-            <div id="google-register-button" className="w-full"></div>
-          </form>
-
-          <div className="mt-8 text-center text-sm text-gray-600">
-            {t("auth.alreadyHaveAccount")}{" "}
-            <Link
-              href="/auth/login"
-              className="text-blue-600 font-bold hover:underline"
-            >
-              {t("nav.login")}
-            </Link>
+          <div className="relative mx-auto flex w-full max-w-md items-center justify-center">
+            <div className="absolute inset-x-10 top-8 h-40 rounded-full bg-blue-200/60 blur-3xl" />
+            <Image
+              src="/images/image.png"
+              alt="Marketplace illustration"
+              width={520}
+              height={520}
+              className="relative h-auto w-full max-w-sm object-contain drop-shadow-xl"
+              priority
+            />
           </div>
-        </div>
+
+          <div className="relative space-y-4">
+            <div className="rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm">
+              <p className="font-semibold text-slate-900">Post faster</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Create your seller profile and start listing in minutes.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm">
+              <p className="font-semibold text-slate-900">Reach more buyers</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Keep your products, favorites, and messages in one account.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="flex items-center px-5 py-8 sm:px-8 lg:px-12">
+          <div className="mx-auto w-full max-w-md">
+            <div className="mb-8">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">
+                {t("nav.register")}
+              </p>
+              <h2 className="text-3xl font-semibold text-slate-900">
+                {t("auth.createAccount")}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                {t("auth.registerSubtitle")}
+              </p>
+            </div>
+
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  {t("auth.fullName")}
+                </label>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
+                  <User className="h-5 w-5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder={t("auth.enterFullName")}
+                    className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  {t("auth.email")}
+                </label>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
+                  <Mail className="h-5 w-5 text-slate-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t("auth.enterEmail")}
+                    className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  {t("auth.phoneNumber")}
+                </label>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
+                  <Phone className="h-5 w-5 text-slate-400" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder={t("auth.enterPhone")}
+                    className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  {t("auth.password")}
+                </label>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
+                  <Lock className="h-5 w-5 text-slate-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t("auth.enterPassword")}
+                    className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    className="text-slate-400 transition hover:text-slate-700"
+                    aria-label={
+                      showPassword
+                        ? t("auth.hidePassword")
+                        : t("auth.showPassword")
+                    }
+                  >
+                    {showPassword ? (
+                      <EyeClosed className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  {t("auth.confirmPassword")}
+                </label>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
+                  <Lock className="h-5 w-5 text-slate-400" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder={t("auth.retypePassword")}
+                    className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((current) => !current)}
+                    className="text-slate-400 transition hover:text-slate-700"
+                    aria-label={
+                      showConfirmPassword
+                        ? t("auth.hideConfirmPassword")
+                        : t("auth.showConfirmPassword")
+                    }
+                  >
+                    {showConfirmPassword ? (
+                      <EyeClosed className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${
+                  passwordHasError
+                    ? "border-red-200 bg-red-50 text-red-600"
+                    : "border-blue-100 bg-blue-50 text-slate-600"
+                }`}
+              >
+                {PASSWORD_REQUIREMENTS_MESSAGE}
+              </div>
+
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
+              >
+                {t("nav.register")}
+              </button>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-4 text-sm text-slate-400">
+                    {t("auth.orSignUpWith")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                <div id="google-register-button" className="w-full" />
+              </div>
+            </form>
+
+            <p className="mt-8 text-center text-sm text-slate-500">
+              {t("auth.alreadyHaveAccount")}{" "}
+              <Link
+                href="/auth/login"
+                className="font-semibold text-blue-600 transition hover:text-blue-700 hover:underline"
+              >
+                {t("nav.login")}
+              </Link>
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );
-};
-
-export default RegisterPage;
+}

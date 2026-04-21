@@ -28,6 +28,8 @@ export default function PostProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -51,9 +53,9 @@ export default function PostProductPage() {
   const [ram, setRam] = useState("");
   const [screenSize, setScreenSize] = useState("");
 
-  // Check authentication, fetch categories, and prefill contact info from user account
+  // Check authentication and prefill contact info from user account
   useEffect(() => {
-    const checkAuthAndFetchCategories = async () => {
+    const checkAuthAndPrefillProfile = async () => {
       const token = localStorage.getItem("token");
       if (!token) {
         router.push("/auth/login?redirect=/products/add");
@@ -61,13 +63,6 @@ export default function PostProductPage() {
       }
 
       try {
-        // Fetch categories
-        const catRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
-        if (catRes.ok) {
-          const data = await catRes.json();
-          setCategories(data);
-        }
-
         // Fetch current user profile to prefill contact info
         let profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
           headers: {
@@ -99,9 +94,7 @@ export default function PostProductPage() {
           if (contentType && contentType.includes("application/json")) {
             const userData = await profileRes.json();
             if (userData) {
-              if (!contactName) {
-                setContactName(userData.name || "");
-              }
+              setContactName((current) => current || userData.name || "");
               const phoneFromProfile = (userData.phone || "").trim();
               if (phoneFromProfile) {
                 setPhoneNumbers([phoneFromProfile]);
@@ -114,8 +107,40 @@ export default function PostProductPage() {
       }
     };
 
-    checkAuthAndFetchCategories();
+    checkAuthAndPrefillProfile();
   }, [router]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setCategoriesLoading(true);
+      setCategoriesError("");
+
+      try {
+        const catRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
+
+        if (!catRes.ok) {
+          setCategories([]);
+          setCategoriesError("Could not load categories.");
+          return;
+        }
+
+        const data = (await catRes.json()) as Category[];
+        setCategories(data);
+
+        if (data.length === 0) {
+          setCategoriesError("No categories are available yet.");
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+        setCategories([]);
+        setCategoriesError("Could not load categories.");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Handle image selection
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,7 +271,7 @@ export default function PostProductPage() {
       });
 
       const contentType = res.headers.get("content-type");
-      let data: any = null;
+      let data: { message?: string; error?: string } | null = null;
 
       if (contentType && contentType.includes("application/json")) {
         data = await res.json();
@@ -316,7 +341,7 @@ export default function PostProductPage() {
               </p>
               <p>
                 All products are reviewed by our admin team before being
-                published. Your product will be visible to buyers once it's
+                published. Your product will be visible to buyers once it&apos;s
                 approved.
               </p>
             </div>
@@ -354,7 +379,7 @@ export default function PostProductPage() {
                             users
                           </li>
                           <li>
-                            You'll be able to see your product status in your
+                            You&apos;ll be able to see your product status in your
                             profile
                           </li>
                         </ul>
@@ -476,15 +501,30 @@ export default function PostProductPage() {
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
                 required
+                disabled={categoriesLoading || categories.length === 0}
                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white transition-all outline-none"
               >
-                <option value="">Select a category</option>
+                <option value="">
+                  {categoriesLoading
+                    ? "Loading categories..."
+                    : categories.length === 0
+                    ? "No categories available"
+                    : "Select a category"}
+                </option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
                 ))}
               </select>
+              {categoriesError && (
+                <p className="mt-2 text-sm text-red-600">{categoriesError}</p>
+              )}
+              {!categoriesLoading && categories.length > 0 && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Choose the category that best matches your product.
+                </p>
+              )}
             </div>
 
             {/* Contact Information */}
