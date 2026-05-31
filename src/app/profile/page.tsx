@@ -11,16 +11,20 @@ import {
   Save,
   X,
   LogOut,
-  Lock,
-  Eye,
-  EyeOff,
   Camera,
   Upload,
+  ShieldCheck,
+  ArrowRight,
+  Package,
+  PlusCircle,
+  ExternalLink,
+  Clock,
+  Tag,
+  DollarSign,
+  Trash2,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
-import {
-  PASSWORD_REQUIREMENTS_MESSAGE,
-  validatePasswordStrength,
-} from "../../lib/validation";
 
 interface UserData {
   id?: number;
@@ -31,6 +35,116 @@ interface UserData {
   avatar?: string;
 }
 
+interface ProductImage {
+  id?: number;
+  path?: string;
+  url?: string;
+  is_cover?: number;
+}
+
+interface ProfileProduct {
+  id: number;
+  category_id?: number;
+  title: string;
+  description?: string;
+  price: string | number;
+  product_condition: string;
+  status: string;
+  category_name?: string;
+  created_at?: string;
+  images?: ProductImage[];
+}
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+const getAvatarSrc = (avatar?: string | null) => {
+  if (!avatar) {
+    return null;
+  }
+
+  if (
+    avatar.startsWith("http://") ||
+    avatar.startsWith("https://") ||
+    avatar.startsWith("data:") ||
+    avatar.startsWith("blob:")
+  ) {
+    return avatar;
+  }
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  return `${apiUrl}${avatar.startsWith("/") ? avatar : `/${avatar}`}`;
+};
+
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const getProductImageSrc = (product: ProfileProduct) => {
+  const image = product.images?.[0];
+
+  if (!image) {
+    return "/images/hero.png";
+  }
+
+  if (image.url) {
+    return image.url;
+  }
+
+  if (image.path) {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    return `${apiUrl}/${image.path.replace(/^\/+/, "")}`;
+  }
+
+  return "/images/hero.png";
+};
+
+const getStatusLabel = (status: string) => {
+  if (status === "active") return "Approved";
+  if (status === "removed") return "Rejected";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+const getStatusClassName = (status: string) => {
+  if (status === "active") return "bg-green-100 text-green-700";
+  if (status === "pending") return "bg-amber-100 text-amber-700";
+  if (status === "sold") return "bg-blue-100 text-blue-700";
+  if (status === "removed") return "bg-red-100 text-red-700";
+  return "bg-slate-100 text-slate-700";
+};
+
+const formatProductPrice = (price: string | number) => {
+  const priceNumber = typeof price === "string" ? parseFloat(price) : price;
+
+  if (!Number.isFinite(priceNumber)) {
+    return String(price);
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: Number.isInteger(priceNumber) ? 0 : 2,
+  }).format(priceNumber);
+};
+
+const formatProductDate = (dateValue?: string) => {
+  if (!dateValue) return "Just now";
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "Just now";
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 const ProfilePage = () => {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
@@ -38,16 +152,26 @@ const ProfilePage = () => {
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [products, setProducts] = useState<ProfileProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [editProductForm, setEditProductForm] = useState({
+    title: "",
+    description: "",
+    price: "",
+    product_condition: "used",
+    category_id: "",
+  });
+  const [savingProductId, setSavingProductId] = useState<number | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
 
   // Form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [originalValues, setOriginalValues] = useState<{
@@ -55,7 +179,6 @@ const ProfilePage = () => {
     phone: string;
     avatar: string | null;
   } | null>(null);
-  const passwordStrengthError = password ? validatePasswordStrength(password) : null;
 
   // Helper function to safely parse JSON response
   const safeJsonParse = async (response: Response) => {
@@ -73,25 +196,65 @@ const ProfilePage = () => {
 
   // Fetch user profile
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchMyProducts = async () => {
+      setProductsLoading(true);
+      setProductsError("");
+
       try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          router.push("/auth/login");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/me`, {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          const errorData = await safeJsonParse(res);
+          setProductsError(
+            errorData?.message ||
+              `Could not load your products (${res.status}).`
+          );
           return;
         }
 
+        const data = await safeJsonParse(res);
+        setProducts(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("My products fetch error:", error);
+        setProductsError("Could not load your products.");
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
+
+        if (!res.ok) {
+          setCategories([]);
+          return;
+        }
+
+        const data = await safeJsonParse(res);
+        setCategories(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Categories fetch error:", error);
+        setCategories([]);
+      }
+    };
+
+    const fetchProfile = async () => {
+      try {
         // Try primary endpoint first
         let res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+          credentials: "include",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
 
         if (res.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("role");
           router.push("/auth/login");
           return;
         }
@@ -99,15 +262,13 @@ const ProfilePage = () => {
         // If primary endpoint fails, try alternative
         if (!res.ok) {
           res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+            credentials: "include",
             headers: {
-              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           });
 
           if (res.status === 401) {
-            localStorage.removeItem("token");
-            localStorage.removeItem("role");
             router.push("/auth/login");
             return;
           }
@@ -122,7 +283,7 @@ const ProfilePage = () => {
             setPhone(data.phone || "");
             // Set avatar preview if exists
             if (data.avatar) {
-              setAvatarPreview(`${process.env.NEXT_PUBLIC_API_URL}${data.avatar}`);
+              setAvatarPreview(getAvatarSrc(data.avatar));
             } else {
               setAvatarPreview(null);
             }
@@ -132,6 +293,7 @@ const ProfilePage = () => {
               phone: data.phone || "",
               avatar: data.avatar || null,
             });
+            fetchMyProducts();
           } else {
             setError("Invalid response format from server");
           }
@@ -155,6 +317,7 @@ const ProfilePage = () => {
       }
     };
 
+    fetchCategories();
     fetchProfile();
   }, [router]);
 
@@ -193,18 +356,6 @@ const ProfilePage = () => {
       return setError("Name is required");
     }
 
-    // Validate password if provided
-    if (password) {
-      if (passwordStrengthError) {
-        setIsSubmitting(false);
-        return setError(passwordStrengthError);
-      }
-      if (password !== confirmPassword) {
-        setIsSubmitting(false);
-        return setError("Passwords do not match");
-      }
-    }
-
     // Check if there are any actual changes
     if (originalValues) {
       const hasNameChange = name.trim() !== (originalValues.name || "").trim();
@@ -212,9 +363,8 @@ const ProfilePage = () => {
       const currentPhone = (phone || "").trim();
       const hasPhoneChange = currentPhone !== originalPhone;
       const hasAvatarChange = avatarFile !== null;
-      const hasPasswordChange = password && password.trim().length > 0;
 
-      const hasChanges = hasNameChange || hasPhoneChange || hasAvatarChange || hasPasswordChange;
+      const hasChanges = hasNameChange || hasPhoneChange || hasAvatarChange;
 
       if (!hasChanges) {
         setIsSubmitting(false);
@@ -225,12 +375,6 @@ const ProfilePage = () => {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/auth/login");
-        return;
-      }
-
       // Use FormData if we have an image, otherwise use JSON
       const hasImage = avatarFile !== null;
       
@@ -241,36 +385,26 @@ const ProfilePage = () => {
         const formData = new FormData();
         formData.append("name", name.trim());
         formData.append("phone", phone.trim() || "");
-        if (password) {
-          formData.append("password", password);
-        }
         if (avatarFile) {
           formData.append("avatar", avatarFile);
         }
 
         res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
           method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            // Don't set Content-Type for FormData, browser will set it with boundary
-          },
+          credentials: "include",
           body: formData,
         });
       } else {
         // Use JSON for regular updates
-        const updateData: any = {
+        const updateData: { name: string; phone: string; password?: string } = {
           name: name.trim(),
           phone: phone.trim() || "",
         };
 
-        if (password) {
-          updateData.password = password;
-        }
-
         res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
           method: "PUT",
+          credentials: "include",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(updateData),
@@ -287,7 +421,7 @@ const ProfilePage = () => {
           setPhone(data.phone || "");
           // Update avatar preview
           if (data.avatar) {
-            setAvatarPreview(`${process.env.NEXT_PUBLIC_API_URL}${data.avatar}`);
+            setAvatarPreview(getAvatarSrc(data.avatar));
           }
           // Clear file input
           setAvatarFile(null);
@@ -299,8 +433,6 @@ const ProfilePage = () => {
           });
           setMessage("Profile updated successfully!");
           setEditing(false);
-          setPassword("");
-          setConfirmPassword("");
           setIsSubmitting(false);
           // Auto-hide success message after 3 seconds
           setTimeout(() => setMessage(""), 3000);
@@ -308,8 +440,6 @@ const ProfilePage = () => {
           // If response is not JSON but status is OK, assume success
           setMessage("Profile updated successfully!");
           setEditing(false);
-          setPassword("");
-          setConfirmPassword("");
           setAvatarFile(null);
           setIsSubmitting(false);
           setTimeout(() => setMessage(""), 3000);
@@ -341,10 +471,157 @@ const ProfilePage = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+  const handleLogout = async () => {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+    window.dispatchEvent(new Event("authChange"));
     router.push("/auth/login");
+  };
+
+  const startEditingProduct = (product: ProfileProduct) => {
+    setEditingProductId(product.id);
+    setEditProductForm({
+      title: product.title || "",
+      description: product.description || "",
+      price: String(product.price ?? ""),
+      product_condition: product.product_condition || "used",
+      category_id: product.category_id ? String(product.category_id) : "",
+    });
+    setProductsError("");
+  };
+
+  const cancelEditingProduct = () => {
+    setEditingProductId(null);
+    setEditProductForm({
+      title: "",
+      description: "",
+      price: "",
+      product_condition: "used",
+      category_id: "",
+    });
+  };
+
+  const handleSaveProduct = async (productId: number) => {
+    setProductsError("");
+
+    if (!editProductForm.title.trim()) {
+      setProductsError("Product title is required.");
+      return;
+    }
+
+    if (!editProductForm.price || Number(editProductForm.price) <= 0) {
+      setProductsError("Valid product price is required.");
+      return;
+    }
+
+    if (!editProductForm.category_id) {
+      setProductsError("Please select a category.");
+      return;
+    }
+
+    setSavingProductId(productId);
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${productId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: editProductForm.title.trim(),
+            description: editProductForm.description.trim(),
+            price: editProductForm.price,
+            product_condition: editProductForm.product_condition,
+            category_id: editProductForm.category_id,
+          }),
+        }
+      );
+
+      const data = await safeJsonParse(res);
+
+      if (!res.ok) {
+        setProductsError(data?.message || "Failed to update product.");
+        return;
+      }
+
+      const category = categories.find(
+        (item) => String(item.id) === editProductForm.category_id
+      );
+
+      setProducts((currentProducts) =>
+        currentProducts.map((product) =>
+          product.id === productId
+            ? {
+                ...product,
+                ...data,
+                category_name: category?.name || product.category_name,
+                images: product.images,
+              }
+            : product
+        )
+      );
+      cancelEditingProduct();
+      setMessage("Product updated successfully!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      console.error("Product update error:", error);
+      setProductsError("Failed to update product. Please try again.");
+    } finally {
+      setSavingProductId(null);
+    }
+  };
+
+  const handleRemoveProduct = async (product: ProfileProduct) => {
+    const confirmed = window.confirm(
+      `Remove "${product.title}" from your listed products?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setProductsError("");
+    setDeletingProductId(product.id);
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${product.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reason: "Removed by product owner" }),
+        }
+      );
+
+      const data = await safeJsonParse(res);
+
+      if (!res.ok) {
+        setProductsError(data?.message || "Failed to remove product.");
+        return;
+      }
+
+      setProducts((currentProducts) =>
+        currentProducts.filter((item) => item.id !== product.id)
+      );
+      if (editingProductId === product.id) {
+        cancelEditingProduct();
+      }
+      setMessage("Product removed successfully!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      console.error("Product remove error:", error);
+      setProductsError("Failed to remove product. Please try again.");
+    } finally {
+      setDeletingProductId(null);
+    }
   };
 
   if (loading) {
@@ -379,16 +656,6 @@ const ProfilePage = () => {
     );
   }
 
-  // Get user initials for avatar
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
       <div className="max-w-5xl mx-auto">
@@ -401,7 +668,7 @@ const ProfilePage = () => {
               <div className="relative">
                 {avatarPreview || user?.avatar ? (
                   <img
-                    src={avatarPreview || `${process.env.NEXT_PUBLIC_API_URL}${user?.avatar}`}
+                    src={avatarPreview || getAvatarSrc(user?.avatar) || ""}
                     alt={user?.name || "Profile"}
                     className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
                     onError={(e) => {
@@ -611,7 +878,7 @@ const ProfilePage = () => {
                         />
                       ) : user?.avatar ? (
                         <img
-                          src={`${process.env.NEXT_PUBLIC_API_URL}${user.avatar}`}
+                          src={getAvatarSrc(user.avatar) || ""}
                           alt="Current"
                           className="w-24 h-24 rounded-full object-cover border-4 border-blue-200"
                         />
@@ -699,91 +966,25 @@ const ProfilePage = () => {
                       {user?.role || "user"}
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    Role cannot be changed
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Lock className="w-5 h-5 text-gray-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Change Password
-                  </h3>
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    Optional
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mb-4">
-                  Leave blank to keep your current password
-                </p>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">
-                      New Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter new password"
-                        className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white transition-all outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                    {password && passwordStrengthError && (
-                      <p className="text-xs text-red-500">
-                        {PASSWORD_REQUIREMENTS_MESSAGE}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">
-                      Confirm Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Re-type new password"
-                        className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white transition-all outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                    {password &&
-                      confirmPassword &&
-                      password !== confirmPassword && (
-                        <p className="text-xs text-red-500">
-                          Passwords do not match
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Security settings
                         </p>
-                      )}
+                        <p className="mt-1 text-xs text-slate-500">
+                          Update your password on a separate page for a cleaner view.
+                        </p>
+                      </div>
+                      <Link
+                        href="/profile/security"
+                        className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                      >
+                        <ShieldCheck className="h-4 w-4" />
+                        Open
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -800,7 +1001,7 @@ const ProfilePage = () => {
                       setEmail(user.email || "");
                       setPhone(user.phone || "");
                       if (user.avatar) {
-                        setAvatarPreview(`${process.env.NEXT_PUBLIC_API_URL}${user.avatar}`);
+                        setAvatarPreview(getAvatarSrc(user.avatar));
                       } else {
                         setAvatarPreview(null);
                       }
@@ -811,11 +1012,7 @@ const ProfilePage = () => {
                         avatar: user.avatar || null,
                       });
                     }
-                    setPassword("");
-                    setConfirmPassword("");
                     setAvatarFile(null);
-                    setShowPassword(false);
-                    setShowConfirmPassword(false);
                   }}
                   className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl transition-all font-semibold flex items-center gap-2"
                 >
@@ -832,6 +1029,276 @@ const ProfilePage = () => {
                 </button>
               </div>
             </form>
+          )}
+        </div>
+
+        {/* My Products */}
+        <div className="mt-6 bg-white rounded-2xl shadow-lg p-8">
+          <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <Package className="w-6 h-6 text-blue-600" />
+                My Products
+              </h2>
+              <p className="text-gray-500 mt-1">
+                Products you posted and their approval status
+              </p>
+            </div>
+            <Link
+              href="/products/add"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Post Product
+            </Link>
+          </div>
+
+          {productsError && (
+            <div className="mt-6 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              <AlertCircle className="h-4 w-4" />
+              {productsError}
+            </div>
+          )}
+
+          {productsLoading ? (
+            <div className="py-10 text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600"></div>
+              <p className="mt-4 text-sm font-medium text-gray-500">
+                Loading your products...
+              </p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="py-10 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                <Package className="h-7 w-7" />
+              </div>
+              <h3 className="mt-4 text-lg font-bold text-gray-900">
+                No products posted yet
+              </h3>
+              <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">
+                When you post a product, it will be stored here on your profile.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-6 divide-y divide-gray-100">
+              {products.map((product) => (
+                <div
+                  key={product.id}
+                  className="py-5"
+                >
+                  {editingProductId === product.id ? (
+                    <div className="grid gap-4 lg:grid-cols-[8rem,1fr]">
+                      <img
+                        src={getProductImageSrc(product)}
+                        alt={product.title}
+                        className="h-28 w-full rounded-xl object-cover lg:h-24 lg:w-32"
+                        onError={(e) => {
+                          e.currentTarget.src = "/images/hero.png";
+                        }}
+                      />
+                      <form
+                        className="space-y-4"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleSaveProduct(product.id);
+                        }}
+                      >
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase text-gray-500">
+                              Title
+                            </label>
+                            <input
+                              type="text"
+                              value={editProductForm.title}
+                              onChange={(e) =>
+                                setEditProductForm((current) => ({
+                                  ...current,
+                                  title: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-xl border-2 border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase text-gray-500">
+                              Price
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editProductForm.price}
+                              onChange={(e) =>
+                                setEditProductForm((current) => ({
+                                  ...current,
+                                  price: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-xl border-2 border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase text-gray-500">
+                              Condition
+                            </label>
+                            <select
+                              value={editProductForm.product_condition}
+                              onChange={(e) =>
+                                setEditProductForm((current) => ({
+                                  ...current,
+                                  product_condition: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-xl border-2 border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            >
+                              <option value="new">New</option>
+                              <option value="used">Used</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase text-gray-500">
+                              Category
+                            </label>
+                            <select
+                              value={editProductForm.category_id}
+                              onChange={(e) =>
+                                setEditProductForm((current) => ({
+                                  ...current,
+                                  category_id: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-xl border-2 border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            >
+                              <option value="">Select a category</option>
+                              {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold uppercase text-gray-500">
+                            Description
+                          </label>
+                          <textarea
+                            value={editProductForm.description}
+                            onChange={(e) =>
+                              setEditProductForm((current) => ({
+                                ...current,
+                                description: e.target.value,
+                              }))
+                            }
+                            rows={3}
+                            className="w-full resize-none rounded-xl border-2 border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                          <button
+                            type="button"
+                            onClick={cancelEditingProduct}
+                            disabled={savingProductId === product.id}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-300 disabled:opacity-60"
+                          >
+                            <X className="h-4 w-4" />
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={savingProductId === product.id}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:bg-gray-400"
+                          >
+                            {savingProductId === product.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4" />
+                            )}
+                            Save Product
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                      <img
+                        src={getProductImageSrc(product)}
+                        alt={product.title}
+                        className="h-28 w-full rounded-xl object-cover sm:h-24 sm:w-32"
+                        onError={(e) => {
+                          e.currentTarget.src = "/images/hero.png";
+                        }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusClassName(
+                              product.status
+                            )}`}
+                          >
+                            {getStatusLabel(product.status)}
+                          </span>
+                          {product.category_name && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                              <Tag className="h-3.5 w-3.5" />
+                              {product.category_name}
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="mt-2 truncate text-lg font-bold text-gray-900">
+                          {product.title}
+                        </h3>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500">
+                          <span className="inline-flex items-center gap-1.5">
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                            {formatProductPrice(product.price)}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 capitalize">
+                            <Tag className="h-4 w-4 text-blue-600" />
+                            {product.product_condition.replace(/_/g, " ")}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <Clock className="h-4 w-4 text-slate-400" />
+                            {formatProductDate(product.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid gap-2 sm:w-32">
+                        <Link
+                          href={`/products/${product.id}`}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          View
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => startEditingProduct(product)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProduct(product)}
+                          disabled={deletingProductId === product.id}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+                        >
+                          {deletingProductId === product.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

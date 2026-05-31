@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
+import type { DashboardAnalytics } from "../../../services/adminService";
+import { fetchDashboardAnalytics } from "../../../services/adminService";
 import {
   Shield,
   CheckCircle,
@@ -10,6 +13,7 @@ import {
   Eye,
   Package,
   User,
+  Users,
   Calendar,
   DollarSign,
   Tag,
@@ -19,6 +23,10 @@ import {
   Search,
   Trash2,
   X,
+  Activity,
+  ShoppingCart,
+  TrendingUp,
+  Flag,
 } from "lucide-react";
 
 interface ProductImage {
@@ -44,6 +52,40 @@ interface Product {
   updated_at?: string;
 }
 
+const emptyDashboardAnalytics: DashboardAnalytics = {
+  users: {
+    total: 0,
+    active: 0,
+    inactive: 0,
+    admins: 0,
+    regular: 0,
+    newLast30Days: 0,
+  },
+  listings: {
+    total: 0,
+    active: 0,
+    pending: 0,
+    sold: 0,
+    removed: 0,
+    activeValue: 0,
+    newLast30Days: 0,
+  },
+  sales: {
+    totalSales: 0,
+    totalRevenue: 0,
+    averageSalePrice: 0,
+    monthlySales: 0,
+    monthlyRevenue: 0,
+    soldRate: 0,
+  },
+  reports: {
+    total: 0,
+    open: 0,
+  },
+  recentListings: [],
+  recentSales: [],
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,8 +94,17 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState("");
   const [filter, setFilter] = useState<
     "all" | "pending" | "approved" | "rejected"
-  >("pending");
+  >("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [totalUsers, setTotalUsers] = useState<number | null>(null);
+  const [analytics, setAnalytics] = useState({
+    totalProducts: null as number | null,
+    pendingProducts: null as number | null,
+    approvedProducts: null as number | null,
+    rejectedProducts: null as number | null,
+  });
+  const [dashboardAnalytics, setDashboardAnalytics] =
+    useState<DashboardAnalytics | null>(null);
   
   // Helper to map database status to display status
   const getDisplayStatus = (dbStatus: string) => {
@@ -61,78 +112,89 @@ export default function AdminDashboard() {
     if (dbStatus === "removed") return "rejected";
     return dbStatus;
   };
+
+  const getDbStatusForFilter = (value: "all" | "pending" | "approved" | "rejected") => {
+    if (value === "approved") return "active";
+    if (value === "rejected") return "removed";
+    if (value === "pending") return "pending";
+    return null;
+  };
+
+  const loadProductsByDbStatus = async (dbStatus: string | null) => {
+    const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/products`);
+    if (dbStatus) {
+      url.searchParams.set("status", dbStatus);
+    }
+
+    const res = await fetch(url.toString(), {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to load products (${dbStatus || "all"})`);
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  };
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteProductId, setDeleteProductId] = useState<number | null>(null);
   const [deleteProductTitle, setDeleteProductTitle] = useState("");
   const [deleteReason, setDeleteReason] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectProductId, setRejectProductId] = useState<number | null>(null);
+  const [rejectProductTitle, setRejectProductTitle] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
 
   // Check admin authentication and fetch products
   useEffect(() => {
     const checkAdminAndFetch = async () => {
-      const token = localStorage.getItem("token");
-      let role = localStorage.getItem("role");
+      let role: string | undefined;
 
-      console.log("=== ADMIN DASHBOARD CHECK ===");
-      console.log("Token exists:", !!token);
-      console.log("Raw role from localStorage:", role);
-      console.log("Role type:", typeof role);
-      console.log("Role length:", role?.length);
+      try {
+        const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-      if (!token) {
-        console.log("No token found, redirecting to login...");
+        if (profileRes.status === 401) {
+          router.push("/auth/login");
+          return;
+        }
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          role = profileData.role;
+          setCurrentRole(role || null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch admin profile:", err);
+      }
+
+      if (!role) {
         router.push("/auth/login");
         return;
       }
 
-      // If role not in localStorage, fetch from API
-      if (!role) {
-        console.log("âš ï¸ Role not in localStorage, fetching from API...");
-        try {
-          const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-
-          if (profileRes.ok) {
-            const profileData = await profileRes.json();
-            role = profileData.role;
-            if (role) {
-              localStorage.setItem("role", role);
-              // Also set cookie for middleware
-              document.cookie = `role=${role}; path=/; max-age=${
-                7 * 24 * 60 * 60
-              }; SameSite=Lax`;
-              console.log("âœ… Role fetched from API and saved:", role);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to fetch role from API:", err);
-        }
-      }
-
       // Check if role is admin (case-insensitive, trim whitespace)
       const normalizedRole = role?.toLowerCase()?.trim();
-      console.log("Normalized role:", normalizedRole);
-      console.log("Is admin?", normalizedRole === "admin");
 
       // Also check for common variations
       const isAdminRole =
         normalizedRole === "admin" ||
-        normalizedRole === "administrator" ||
-        role === "Admin" ||
-        role === "ADMIN";
-
-      console.log("Final admin check result:", isAdminRole);
+        normalizedRole === "administrator";
 
       if (!isAdminRole) {
-        console.log("âŒ Not an admin user, setting access denied...");
-        console.log("Current role value:", JSON.stringify(role));
         setAccessDenied(true);
         setIsAdmin(false);
         setLoading(false);
@@ -140,10 +202,14 @@ export default function AdminDashboard() {
       }
 
       // User is admin
-      console.log("âœ… User is admin, proceeding to fetch products...");
       setIsAdmin(true);
       setAccessDenied(false);
-      await fetchProducts();
+      await Promise.all([
+        fetchProducts(),
+        fetchTotalUsers(),
+        fetchAnalytics(),
+        fetchAdminAnalytics(),
+      ]);
     };
 
     checkAdminAndFetch();
@@ -160,48 +226,16 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setError("");
-      const token = localStorage.getItem("token");
 
-      if (!token) {
-        router.push("/auth/login");
-        return;
-      }
+      const dbStatus = getDbStatusForFilter(filter);
+      const statusesToLoad =
+        filter === "all" ? ["active", "pending", "removed", "sold"] : [dbStatus];
 
-      // Fetch all products or filtered by status
-      // Map frontend filter values to database status values
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/products`;
-      if (filter !== "all") {
-        let dbStatus: string = filter;
-        if (filter === "approved") {
-          dbStatus = "active";
-        } else if (filter === "rejected") {
-          dbStatus = "removed";
-        }
-        url += `?status=${dbStatus}`;
-      }
+      const loadedProducts = await Promise.all(
+        statusesToLoad.map((statusValue) => loadProductsByDbStatus(statusValue))
+      );
 
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (res.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        router.push("/auth/login");
-        return;
-      }
-
-      if (!res.ok) {
-        setError("Failed to load products");
-        setLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      setProducts(Array.isArray(data) ? data : []);
+      setProducts(loadedProducts.flat());
     } catch (error) {
       console.error("Fetch products error:", error);
       setError("Failed to load products. Please try again.");
@@ -210,12 +244,94 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchTotalUsers = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`, {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        setTotalUsers(null);
+        return;
+      }
+
+      const data = await res.json();
+      setTotalUsers(Array.isArray(data) ? data.length : 0);
+    } catch (error) {
+      console.error("Fetch total users error:", error);
+      setTotalUsers(null);
+    }
+  };
+
+  const fetchAdminAnalytics = async () => {
+    try {
+      const data = await fetchDashboardAnalytics();
+      setDashboardAnalytics(data);
+      setTotalUsers(data.users.total);
+      setAnalytics({
+        totalProducts: data.listings.total,
+        pendingProducts: data.listings.pending,
+        approvedProducts: data.listings.active,
+        rejectedProducts: data.listings.removed,
+      });
+    } catch (analyticsError) {
+      console.error("Fetch dashboard analytics error:", analyticsError);
+      setDashboardAnalytics(null);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const [approved, pending, rejected, sold] = await Promise.all([
+        loadProductsByDbStatus("active"),
+        loadProductsByDbStatus("pending"),
+        loadProductsByDbStatus("removed"),
+        loadProductsByDbStatus("sold"),
+      ]);
+
+      setAnalytics({
+        totalProducts: approved.length + pending.length + rejected.length + sold.length,
+        pendingProducts: pending.length,
+        approvedProducts: approved.length,
+        rejectedProducts: rejected.length,
+      });
+    } catch (analyticsError) {
+      console.error("Fetch analytics error:", analyticsError);
+      setAnalytics({
+        totalProducts: null,
+        pendingProducts: null,
+        approvedProducts: null,
+        rejectedProducts: null,
+      });
+    }
+  };
+
   const handleApprove = async (productId: number) => {
     await updateProductStatus(productId, "approved");
   };
 
-  const handleReject = async (productId: number) => {
-    await updateProductStatus(productId, "rejected");
+  const handleRejectClick = (product: Product) => {
+    setRejectProductId(product.id);
+    setRejectProductTitle(product.title);
+    setRejectReason("");
+    setShowRejectModal(true);
+    setError("");
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectProductId || !rejectReason.trim()) {
+      setError("Please provide a reason for rejection");
+      return;
+    }
+
+    await updateProductStatus(rejectProductId, "rejected", rejectReason.trim());
+    setShowRejectModal(false);
+    setRejectProductId(null);
+    setRejectProductTitle("");
+    setRejectReason("");
   };
 
   const handleDeleteClick = (product: Product) => {
@@ -236,18 +352,12 @@ export default function AdminDashboard() {
     setError("");
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/auth/login");
-        return;
-      }
-
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/products/${deleteProductId}`,
         {
           method: "DELETE",
+          credentials: "include",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ reason: deleteReason }),
@@ -256,12 +366,15 @@ export default function AdminDashboard() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.message || "Failed to delete product");
+        const errorMessage = data.message || "Failed to delete product";
+        setError(errorMessage);
+        toast.error(errorMessage);
         setIsDeleting(false);
         return;
       }
 
       setMessage("Product deleted successfully");
+      toast.success("Product deleted successfully");
       setShowDeleteModal(false);
       setDeleteProductId(null);
       setDeleteProductTitle("");
@@ -270,51 +383,56 @@ export default function AdminDashboard() {
       // Refresh the products list
       setTimeout(() => {
         fetchProducts();
+        fetchAnalytics();
       }, 500);
     } catch (error) {
       console.error("Delete product error:", error);
-      setError("Failed to delete product. Please try again.");
+      const errorMessage = "Failed to delete product. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const updateProductStatus = async (productId: number, status: string) => {
+  const refreshDashboard = async () => {
+    await Promise.all([
+      fetchProducts(),
+      fetchTotalUsers(),
+      fetchAnalytics(),
+      fetchAdminAnalytics(),
+    ]);
+    toast.success("Dashboard refreshed");
+  };
+
+  const updateProductStatus = async (
+    productId: number,
+    status: string,
+    reason?: string
+  ) => {
     try {
       setProcessingId(productId);
       setMessage("");
       setError("");
 
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/auth/login");
-        return;
-      }
-
-      console.log("Updating product", productId, "to status:", status);
-
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/products/${productId}`,
         {
           method: "PUT",
+          credentials: "include",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify({ status, reason }),
         }
       );
 
-      console.log("Update response status:", res.status);
-      console.log("Update response ok:", res.ok);
-
       const contentType = res.headers.get("content-type");
-      let data: any = null;
+      let data: { message?: string; error?: string } | null = null;
 
       if (contentType && contentType.includes("application/json")) {
         try {
           data = await res.json();
-          console.log("Update response data:", data);
         } catch (e) {
           console.error("Failed to parse JSON response:", e);
         }
@@ -326,27 +444,29 @@ export default function AdminDashboard() {
       if (!res.ok) {
         const errorMessage =
           data?.message || data?.error || `Failed to ${status} product (${res.status})`;
-        console.error("Update failed:", errorMessage);
         setError(errorMessage);
+        toast.error(errorMessage);
         setProcessingId(null);
         return;
       }
 
-      console.log("Product status updated successfully!");
       setMessage(`Product ${status} successfully!`);
+      toast.success(`Product ${status} successfully!`);
       setTimeout(() => setMessage(""), 3000);
       
       // Refresh the list after a short delay to ensure backend has processed
       setTimeout(() => {
         fetchProducts();
+        fetchAnalytics();
       }, 500);
     } catch (error) {
       console.error("Update status error:", error);
-      setError(
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to update product status"
-      );
+          : "Failed to update product status";
+      setError(errorMessage);
+      toast.error(errorMessage);
       setProcessingId(null);
     }
   };
@@ -373,6 +493,15 @@ export default function AdminDashboard() {
     }
   };
 
+  const formatCurrency = (value: string | number | null | undefined) => {
+    const numericValue = Number(value || 0);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 2,
+    }).format(Number.isFinite(numericValue) ? numericValue : 0);
+  };
+
   // Filter products by search query
   const filteredProducts = products.filter((product) => {
     if (!searchQuery.trim()) return true;
@@ -384,6 +513,8 @@ export default function AdminDashboard() {
     );
   });
 
+  const analyticsData = dashboardAnalytics ?? emptyDashboardAnalytics;
+
   // Show access denied message
   if (accessDenied && !loading) {
     return (
@@ -394,50 +525,15 @@ export default function AdminDashboard() {
             Access Denied
           </h1>
           <p className="text-gray-600 mb-6">
-            You don't have permission to access this page. Admin privileges
+            You don&apos;t have permission to access this page. Admin privileges
             required.
           </p>
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left text-sm">
-            <p className="font-semibold mb-2">Debug Info:</p>
-            <p>
-              Token: {localStorage.getItem("token") ? "âœ“ Present" : "âœ— Missing"}
-            </p>
-            <p>Role (localStorage): {localStorage.getItem("role") || "Not set"}</p>
-            <p>Is Admin: {isAdmin ? "Yes" : "No"}</p>
-            <p className="mt-2 text-xs text-gray-500">
-              If you're an admin but seeing this, try refreshing the page or logging out and back in.
-            </p>
-          </div>
           <div className="flex gap-3 justify-center">
             <button
-              onClick={async () => {
-                const token = localStorage.getItem("token");
-                if (token) {
-                  try {
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
-                      headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                      },
-                    });
-                    if (res.ok) {
-                      const data = await res.json();
-                      if (data.role) {
-                        localStorage.setItem("role", data.role);
-                        document.cookie = `role=${data.role}; path=/; max-age=${
-                          7 * 24 * 60 * 60
-                        }; SameSite=Lax`;
-                        window.location.reload();
-                      }
-                    }
-                  } catch (err) {
-                    console.error("Failed to refresh role:", err);
-                  }
-                }
-              }}
+              onClick={() => window.location.reload()}
               className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors font-medium"
             >
-              Refresh Role
+              Refresh
             </button>
             <Link
               href="/"
@@ -476,17 +572,9 @@ export default function AdminDashboard() {
               <p className="text-gray-600 mt-2">
                 Review and manage products submitted by users
               </p>
-              <div className="mt-2 space-y-1">
-                <p className="text-xs text-gray-400">
-                  Logged in as: {localStorage.getItem("role") || "Unknown"}
-                </p>
-                <div className="text-xs text-gray-400 space-y-0.5">
-                  <p>
-                    Debug: Token={localStorage.getItem("token") ? "âœ“" : "âœ—"},
-                    Admin={isAdmin ? "Yes" : "No"}
-                  </p>
-                </div>
-              </div>
+              <p className="mt-2 text-xs text-gray-400">
+                Logged in as: {currentRole || "Unknown"}
+              </p>
             </div>
             <Link
               href="/"
@@ -494,6 +582,106 @@ export default function AdminDashboard() {
             >
               Back to Home
             </Link>
+            <Link
+              href="/admin/reports"
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium"
+            >
+              View Reports
+            </Link>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm">
+              <div className="mb-3 inline-flex rounded-2xl bg-white p-3 text-blue-600 shadow-sm">
+                <Users className="h-6 w-6" />
+              </div>
+              <p className="text-xs uppercase tracking-[0.2em] text-blue-500">
+                Total users
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {dashboardAnalytics ? analyticsData.users.total : totalUsers ?? "--"}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {analyticsData.users.newLast30Days} new in the last 30 days
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-5 shadow-sm">
+              <div className="mb-3 inline-flex rounded-2xl bg-white p-3 text-cyan-700 shadow-sm">
+                <Activity className="h-6 w-6" />
+              </div>
+              <p className="text-xs uppercase tracking-[0.2em] text-cyan-700">
+                Active listings
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {dashboardAnalytics
+                  ? analyticsData.listings.active
+                  : analytics.approvedProducts ?? "--"}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {formatCurrency(analyticsData.listings.activeValue)} listed value
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5 shadow-sm">
+              <div className="mb-3 inline-flex rounded-2xl bg-white p-3 text-amber-700 shadow-sm">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-600">
+                Pending
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {analytics.pendingProducts === null ? "--" : analytics.pendingProducts}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                Waiting for moderation
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
+              <div className="mb-3 inline-flex rounded-2xl bg-white p-3 text-emerald-700 shadow-sm">
+                <ShoppingCart className="h-6 w-6" />
+              </div>
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-600">
+                Total sales
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {dashboardAnalytics ? analyticsData.sales.totalSales : "--"}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {formatCurrency(analyticsData.sales.totalRevenue)} revenue
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm">
+              <div className="mb-3 inline-flex rounded-2xl bg-white p-3 text-indigo-700 shadow-sm">
+                <TrendingUp className="h-6 w-6" />
+              </div>
+              <p className="text-xs uppercase tracking-[0.2em] text-indigo-600">
+                This month
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {dashboardAnalytics ? analyticsData.sales.monthlySales : "--"}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {formatCurrency(analyticsData.sales.monthlyRevenue)} sold this month
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-red-100 bg-red-50 p-5 shadow-sm">
+              <div className="mb-3 inline-flex rounded-2xl bg-white p-3 text-red-700 shadow-sm">
+                <Flag className="h-6 w-6" />
+              </div>
+              <p className="text-xs uppercase tracking-[0.2em] text-red-600">
+                Open reports
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {dashboardAnalytics ? analyticsData.reports.open : "--"}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {analyticsData.reports.total} reports in total
+              </p>
+            </div>
           </div>
         </div>
 
@@ -572,7 +760,7 @@ export default function AdminDashboard() {
 
             {/* Refresh Button */}
             <button
-              onClick={fetchProducts}
+              onClick={refreshDashboard}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
@@ -717,7 +905,7 @@ export default function AdminDashboard() {
                             Approve
                           </button>
                           <button
-                            onClick={() => handleReject(product.id)}
+                            onClick={() => handleRejectClick(product)}
                             disabled={processingId === product.id}
                             className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
                           >
@@ -831,6 +1019,95 @@ export default function AdminDashboard() {
                   <>
                     <Trash2 className="w-4 h-4" />
                     Delete Product
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Product Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <XCircle className="w-6 h-6 text-red-600" />
+                Reject Product
+              </h2>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectProductId(null);
+                  setRejectProductTitle("");
+                  setRejectReason("");
+                  setError("");
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                Please provide the reason for rejecting this product.
+              </p>
+              {rejectProductTitle && (
+                <p className="text-sm text-gray-600 font-medium mb-4">
+                  Product: <span className="font-bold">{rejectProductTitle}</span>
+                </p>
+              )}
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Rejection Reason <span className="text-red-600">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Explain clearly why this product is rejected. This reason will be sent to the seller."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none"
+                rows={4}
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectProductId(null);
+                  setRejectProductTitle("");
+                  setRejectReason("");
+                  setError("");
+                }}
+                disabled={processingId !== null}
+                className="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectConfirm}
+                disabled={processingId !== null || !rejectReason.trim()}
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                {processingId !== null ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Rejecting...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4" />
+                    Reject Product
                   </>
                 )}
               </button>

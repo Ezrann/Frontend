@@ -13,8 +13,8 @@ import {
   Upload,
   Users,
 } from "lucide-react";
-import ProductCard from "../components/ProductCard";
-import { useTranslation } from "../context/LanguageContext";
+import ProductCard from "@/src/components/products/ProductCard";
+import { useTranslation } from "@/src/context/LanguageContext";
 
 interface ProductImage {
   id?: number;
@@ -29,6 +29,12 @@ interface Product {
   price: string | number;
   product_condition: string;
   category_name?: string;
+  seller_name?: string;
+  created_at?: string;
+  description?: string;
+  location?: string;
+  average_rating?: string | number;
+  total_ratings?: string | number;
   images?: ProductImage[];
 }
 

@@ -6,7 +6,8 @@
     loading: "កំពុងផ្ទុក...",
   },
   nav: {
-    brand: "ទំនិញមួយទឹក",
+    brand: "Second Hand",
+    allCategories: "គ្រប់ប្រភេទ",
     searchPlaceholder: "ស្វែងរកផលិតផល...",
     categories: "ប្រភេទ",
     products: "ផលិតផល",
@@ -20,8 +21,8 @@
   },
   home: {
     titlePrefix: "ទិញ និង លក់",
-    titleHighlight: "ទំនិញមួយទឹក",
-    titleSuffix: "គ្រឿងអេឡិចត្រូនិកនៅកម្ពុជា",
+    titleHighlight: "គ្រឿងអេឡិចត្រូនិក",
+    titleSuffix: "មួយទឹកនៅកម្ពុជា",
     subtitle:
       "ទីផ្សារដែលអាចទុកចិត្តបានសម្រាប់លក់ និងទិញគ្រឿងអេឡិចត្រូនិកមួយទឹកនៅទូទាំងប្រទេសកម្ពុជា។",
     cta: "បង្ហោះផលិតផលរបស់អ្នក",

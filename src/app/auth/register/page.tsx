@@ -11,7 +11,6 @@ import {
   validatePasswordStrength,
 } from "../../../lib/validation";
 import {
-  decodeGoogleResponse,
   handleGoogleLogin,
   initializeGoogleSignIn,
   loadGoogleScript,
@@ -32,18 +31,8 @@ export default function RegisterPage() {
   useEffect(() => {
     async function handleGoogleSignUp(response: { credential: string }) {
       try {
-        const decoded = decodeGoogleResponse(response.credential);
-
-        if (!decoded) {
-          toast.error(t("auth.decodeFailed"));
-          return;
-        }
-
         const result = await handleGoogleLogin({
-          id: decoded.id,
-          email: decoded.email,
-          name: decoded.name,
-          picture: decoded.picture,
+          credential: response.credential,
         });
 
         if (!result.success) {
@@ -158,10 +147,10 @@ export default function RegisterPage() {
   const passwordHasError = Boolean(password && validatePasswordStrength(password));
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dbeafe,_#f8fafc_55%)] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_30px_80px_rgba(30,64,175,0.15)] lg:grid-cols-[1.02fr_0.98fr]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe,#f8fafc_55%)] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-4xl border border-white/70 bg-white shadow-[0_30px_80px_rgba(30,64,175,0.15)] lg:grid-cols-[1.02fr_0.98fr]">
         <section className="relative hidden overflow-hidden bg-[linear-gradient(160deg,#eff6ff_0%,#dbeafe_45%,#bfdbfe_100%)] px-10 py-12 text-slate-900 lg:flex lg:flex-col lg:justify-between">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.85),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.12),_transparent_32%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.85),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.12),transparent_32%)]" />
 
           <div className="relative max-w-md">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-4 py-2 text-sm font-medium text-blue-700 backdrop-blur-sm">
@@ -180,7 +169,7 @@ export default function RegisterPage() {
           <div className="relative mx-auto flex w-full max-w-md items-center justify-center">
             <div className="absolute inset-x-10 top-8 h-40 rounded-full bg-blue-200/60 blur-3xl" />
             <Image
-              src="/images/image.png"
+              src="/images/hero.png"
               alt="Marketplace illustration"
               width={520}
               height={520}
@@ -361,7 +350,9 @@ export default function RegisterPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                <div id="google-register-button" className="w-full" />
+                <div className="flex justify-center">
+                  <div id="google-register-button" />
+                </div>
               </div>
             </form>
 

@@ -7,6 +7,7 @@
   },
   nav: {
     brand: "Second Hand",
+    allCategories: "All Categories",
     searchPlaceholder: "Search products...",
     categories: "Categories",
     products: "Products",

@@ -14,6 +14,7 @@
   "dependencies": {
     "lucide-react": "^0.561.0",
     "next": "16.0.10",
+    "ogl": "^1.0.11",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-hot-toast": "^2.6.0"
@@ -23,7 +24,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "baseline-browser-mapping": "^2.10.14",
+    "baseline-browser-mapping": "^2.10.25",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",
     "tailwindcss": "^4",

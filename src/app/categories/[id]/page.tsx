@@ -2,24 +2,31 @@ import Image from "next/image";
 
 const allProducts = [
   // Phones
-  { id: 1, name: "iPhone 15 Pro Max", price: 1250, location: "Phnom Penh", condition: "Used", category: "phone", img: "/image/iphone1.png" },
-  { id: 3, name: "iPhone 14 Pro", price: 899, location: "Siem Reap", condition: "Used", category: "phone", img: "/image/iphone1.png" },
-  { id: 8, name: "iPhone 13 Mini", price: 499, location: "Kandal", condition: "Used", category: "phone", img: "/image/iphone1.png" },
+  { id: 1, name: "iPhone 15 Pro Max", price: 1250, location: "Phnom Penh", condition: "Used", category: "phone", img: "/images/iphone1.png" },
+  { id: 3, name: "iPhone 14 Pro", price: 899, location: "Siem Reap", condition: "Used", category: "phone", img: "/images/iphone1.png" },
+  { id: 8, name: "iPhone 13 Mini", price: 499, location: "Kandal", condition: "Used", category: "phone", img: "/images/iphone1.png" },
 
   // Tablets
-  { id: 6, name: "iPad Pro 11 2021", price: 720, location: "Phnom Penh", condition: "Used", category: "tablet", img: "/image/iphone1.png" },
+  { id: 6, name: "iPad Pro 11 2021", price: 720, location: "Phnom Penh", condition: "Used", category: "tablet", img: "/images/iphone1.png" },
 
   // Computers
-  { id: 5, name: "Samsung Galaxy S22", price: 650, location: "Battambang", condition: "Used", category: "computer", img: "/image/iphone1.png" },
+  { id: 5, name: "Samsung Galaxy S22", price: 650, location: "Battambang", condition: "Used", category: "computer", img: "/images/iphone1.png" },
 
   // Accessories
-  { id: 2, name: "RGB Gaming Mouse", price: 10, location: "Phnom Penh", condition: "Used", category: "accessories", img: "/image/iphone1.png" },
-  { id: 4, name: "Gaming Mouse Wireless", price: 15, location: "Phnom Penh", condition: "Brand New", category: "accessories", img: "/image/iphone1.png" },
-  { id: 7, name: "Office Mouse Wired", price: 5, location: "Takeo", condition: "Used", category: "accessories", img: "/image/iphone1.png" },
+  { id: 2, name: "RGB Gaming Mouse", price: 10, location: "Phnom Penh", condition: "Used", category: "accessories", img: "/images/iphone1.png" },
+  { id: 4, name: "Gaming Mouse Wireless", price: 15, location: "Phnom Penh", condition: "Brand New", category: "accessories", img: "/images/iphone1.png" },
+  { id: 7, name: "Office Mouse Wired", price: 5, location: "Takeo", condition: "Used", category: "accessories", img: "/images/iphone1.png" },
 ];
 
-export default async function CategoryPage({ params }) {
-  const { category } = params;
+type CategoryPageProps = {
+  params: {
+    id?: string;
+    category?: string;
+  };
+};
+
+export default async function CategoryPage({ params }: CategoryPageProps) {
+  const category = params.category ?? params.id ?? "";
 
   const filtered = allProducts.filter((p) => p.category === category);
 

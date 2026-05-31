@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import Navbar from "../components/Navbar";
-import { Geist, Geist_Mono, Noto_Sans_Khmer } from "next/font/google";
+import { Inter, Geist_Mono, Kantumruy_Pro } from "next/font/google";
+import Navbar from "@/src/components/layout/Navbar";
+import Footer from "@/src/components/layout/Footer";
+import ToastProvider from "@/src/components/providers/ToastProvider";
+import { LanguageProvider } from "@/src/context/LanguageContext";
 import "./globals.css";
-import Footer from "../components/Footer";
-import ToastProvider from "../components/ToastProvider";
-import { LanguageProvider } from "../context/LanguageContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const interSans = Inter({
+  variable: "--font-inter-sans",
   subsets: ["latin"],
 });
 
@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const notoSansKhmer = Noto_Sans_Khmer({
+const kantumruyPro = Kantumruy_Pro({
   variable: "--font-khmer",
   subsets: ["khmer"],
   weight: ["400", "500", "600", "700"],
@@ -35,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSansKhmer.variable} antialiased`}
+        className={`${interSans.variable} ${geistMono.variable} ${kantumruyPro.variable} antialiased`}
       >
         <LanguageProvider>
           <ToastProvider />

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import {
   ArrowLeft,
   Upload,
@@ -32,6 +33,7 @@ export default function PostProductPage() {
   const [categoriesError, setCategoriesError] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [userRole, setUserRole] = useState("");
 
   // Form state
   const [title, setTitle] = useState("");
@@ -56,25 +58,16 @@ export default function PostProductPage() {
   // Check authentication and prefill contact info from user account
   useEffect(() => {
     const checkAuthAndPrefillProfile = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/auth/login?redirect=/products/add");
-        return;
-      }
-
       try {
         // Fetch current user profile to prefill contact info
         let profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+          credentials: "include",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
 
         if (profileRes.status === 401) {
-          // Token no longer valid; redirect to login
-          localStorage.removeItem("token");
-          localStorage.removeItem("role");
           router.push("/auth/login?redirect=/products/add");
           return;
         }
@@ -82,8 +75,8 @@ export default function PostProductPage() {
         // Fallback to auth endpoint if needed
         if (!profileRes.ok) {
           profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+            credentials: "include",
             headers: {
-              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           });
@@ -99,6 +92,7 @@ export default function PostProductPage() {
               if (phoneFromProfile) {
                 setPhoneNumbers([phoneFromProfile]);
               }
+              setUserRole((userData.role || "").toLowerCase());
             }
           }
         }
@@ -232,12 +226,6 @@ export default function PostProductPage() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/auth/login");
-        return;
-      }
-
       // Create FormData for file upload
       const formData = new FormData();
       formData.append("title", title.trim());
@@ -264,9 +252,7 @@ export default function PostProductPage() {
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include",
         body: formData,
       });
 
@@ -294,7 +280,13 @@ export default function PostProductPage() {
       }
 
       // Success - Show notification about admin approval
-      setMessage("pending_approval");
+      if (userRole === "admin") {
+        setMessage("admin_published");
+        toast.success("Product published successfully.");
+      } else {
+        setMessage("pending_approval");
+        toast.success("Your product is waiting for admin approval.");
+      }
       setLoading(false);
 
       // Redirect to homepage after showing notification for 5 seconds
@@ -313,7 +305,7 @@ export default function PostProductPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -334,26 +326,32 @@ export default function PostProductPage() {
 
           {/* Info Banner about Approval Process */}
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <Info className="w-5 h-5 shrink-0 text-blue-600 mt-0.5" />
             <div className="text-sm text-gray-700">
               <p className="font-semibold text-gray-900 mb-1">
-                Admin Approval Required
+                {userRole === "admin" ? "Admin product publishing" : "Admin Approval Required"}
               </p>
               <p>
-                All products are reviewed by our admin team before being
-                published. Your product will be visible to buyers once it&apos;s
-                approved.
+                {userRole === "admin"
+                  ? "Products posted by admin accounts are published immediately."
+                  : "All products are reviewed by our admin team before being published. Your product will be visible to buyers once it&apos;s approved."}
               </p>
             </div>
           </div>
         </div>
 
         {/* Messages */}
+        {message === "admin_published" && (
+          <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-6 py-4 rounded-lg mb-6 flex items-center gap-3 shadow-md animate-fade-in">
+            <CheckCircle className="w-5 h-5" />
+            <p className="font-medium">Product published successfully.</p>
+          </div>
+        )}
         {message === "pending_approval" && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-lg mb-6 shadow-lg overflow-hidden">
+          <div className="bg-linear-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-lg mb-6 shadow-lg overflow-hidden">
             <div className="p-6">
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                     <Shield className="w-6 h-6 text-blue-600" />
                   </div>
@@ -369,7 +367,7 @@ export default function PostProductPage() {
                   </p>
                   <div className="bg-white/70 rounded-lg p-4 mb-4 border border-blue-200">
                     <div className="flex items-start gap-3">
-                      <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <Info className="w-5 h-5 shrink-0 text-blue-600 mt-0.5" />
                       <div className="text-sm text-gray-700">
                         <p className="font-semibold mb-1">What happens next?</p>
                         <ul className="list-disc list-inside space-y-1 text-gray-600">
@@ -481,6 +479,8 @@ export default function PostProductPage() {
                 </label>
                 <select
                   value={productCondition}
+                  title="Condition"
+                  aria-label="Condition"
                   onChange={(e) => setProductCondition(e.target.value)}
                   required
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white transition-all outline-none"
@@ -499,6 +499,8 @@ export default function PostProductPage() {
               </label>
               <select
                 value={categoryId}
+                title="Category"
+                aria-label="Category"
                 onChange={(e) => setCategoryId(e.target.value)}
                 required
                 disabled={categoriesLoading || categories.length === 0}
@@ -720,6 +722,8 @@ export default function PostProductPage() {
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
+                        title="Remove image"
+                        aria-label="Remove image"
                         className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="w-4 h-4" />

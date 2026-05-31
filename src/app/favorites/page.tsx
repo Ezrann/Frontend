@@ -10,6 +10,7 @@ import {
   Package,
   Loader2,
   AlertCircle,
+  Star,
 } from "lucide-react";
 
 interface WishlistItem {
@@ -31,18 +32,10 @@ export default function FavoritesPage() {
 
   useEffect(() => {
     const fetchWishlist = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/auth/login?redirect=/favorites");
-        return;
-      }
-
       try {
         setLoading(true);
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wishlists`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          credentials: "include",
         });
 
         if (!res.ok) {
@@ -69,18 +62,13 @@ export default function FavoritesPage() {
   }, [router]);
 
   const handleRemove = async (productId: number) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       setRemovingId(productId);
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/wishlists/${productId}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          credentials: "include",
         }
       );
 
@@ -99,7 +87,7 @@ export default function FavoritesPage() {
   };
 
   const getImageUrl = (cover: string | null) => {
-    if (!cover) return "/image/placeholder.png";
+    if (!cover) return "/images/hero.png";
     if (cover.startsWith("http")) return cover;
     return `${process.env.NEXT_PUBLIC_API_URL}/${cover}`;
   };
@@ -199,13 +187,13 @@ export default function FavoritesPage() {
             {wishlist.map((item) => (
               <div
                 key={item.id}
-                className="group bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden hover:scale-105 transform hover:-translate-y-2"
+                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
               >
                 {/* Remove Button */}
                 <button
                   onClick={() => handleRemove(item.product_id)}
                   disabled={removingId === item.product_id}
-                  className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-red-600 text-gray-600 hover:text-white rounded-full p-2.5 transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg hover:shadow-xl"
+                  className="absolute top-3 right-3 z-10 rounded-full bg-white/90 p-2.5 text-gray-600 shadow transition-all duration-300 hover:bg-red-600 hover:text-white"
                   title="Remove from favorites"
                 >
                   {removingId === item.product_id ? (
@@ -217,38 +205,41 @@ export default function FavoritesPage() {
 
                 <Link href={`/products/${item.product_id}`}>
                   {/* Product Image */}
-                  <div className="relative w-full h-56 bg-gray-100 overflow-hidden">
+                  <div className="relative aspect-square w-full overflow-hidden bg-gray-100">
                     <img
                       src={getImageUrl(item.cover)}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       onError={(e) => {
-                        e.currentTarget.src = "/image/placeholder.png";
+                        e.currentTarget.src = "/images/hero.png";
                       }}
                     />
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300"></div>
-                    
-                    {/* Heart Badge */}
-                    <div className="absolute top-3 left-3 bg-linear-to-r from-red-600 to-pink-600 text-white rounded-full p-2.5 shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                      <Heart className="w-5 h-5 fill-current" />
-                    </div>
                   </div>
 
                   {/* Product Info */}
-                  <div className="p-5">
-                    <h3 className="font-bold text-gray-900 line-clamp-2 mb-3 text-base group-hover:text-red-600 transition-colors">
+                  <div className="space-y-3 p-5">
+                    <h3 className="line-clamp-2 text-2xl font-extrabold uppercase leading-tight text-slate-950">
                       {item.title}
                     </h3>
-                    <div className="flex items-baseline justify-between">
-                      <p className="text-2xl font-bold bg-linear-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-                        $
-                        {typeof item.price === "string"
-                          ? parseFloat(item.price).toFixed(2)
-                          : Number(item.price).toFixed(2)}
-                      </p>
-                      <span className="text-xs text-gray-400 font-medium">USD</span>
+
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <div className="flex items-center gap-1 text-orange-500">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star
+                            key={index}
+                            className={`h-4 w-4 ${index < 4 ? "fill-orange-500" : ""}`}
+                          />
+                        ))}
+                      </div>
+                      <span className="font-medium text-slate-600">4.6</span>
                     </div>
+
+                    <p className="text-5xl font-black tracking-tight text-slate-950">
+                      $
+                      {typeof item.price === "string"
+                        ? parseFloat(item.price).toFixed(2)
+                        : Number(item.price).toFixed(2)}
+                    </p>
                   </div>
                 </Link>
               </div>

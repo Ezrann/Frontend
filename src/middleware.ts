@@ -14,7 +14,7 @@ const publicRoutes = [
 const protectedRoutes = ["/profile", "/products/add"];
 
 // Admin-only routes
-const adminRoutes = ["/admin/dashboard"];
+const adminRoutes = ["/admin/dashboard", "/admin/reports"];
 
 // Check if a route matches a pattern (supports dynamic routes)
 function matchesRoute(pathname: string, routes: string[]): boolean {
@@ -81,8 +81,7 @@ export function middleware(request: NextRequest) {
       role === "Admin" ||
       role === "ADMIN";
 
-    // If role not in cookie but token exists, allow through (client-side will verify)
-    // This handles cases where cookie wasn't set but localStorage has the role
+    // If role is missing but the session cookie exists, allow the page to verify server-side.
     if (!role && token) {
       console.log("Middleware: Role not in cookie but token exists, allowing through for client-side check");
       return NextResponse.next();

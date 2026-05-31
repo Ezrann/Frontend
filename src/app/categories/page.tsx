@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Tag, Package, Search, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  CircleX,
+  Loader2,
+  Package,
+  Search,
+  Tag,
+} from "lucide-react";
 
 interface Category {
   id: number;
@@ -23,6 +30,7 @@ export default function CategoriesPage() {
         if (!res.ok) {
           throw new Error("Failed to load categories");
         }
+
         const data: Category[] = await res.json();
         setCategories(data);
       } catch (err) {
@@ -39,99 +47,103 @@ export default function CategoriesPage() {
   const filteredCategories = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return categories;
-    return categories.filter((c) => c.name.toLowerCase().includes(query));
+    return categories.filter((category) => category.name.toLowerCase().includes(query));
   }, [categories, search]);
 
+  const totalCategories = categories.length;
+  const visibleCategories = filteredCategories.length;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="max-w-7xl mx-auto px-4 py-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-              <Tag className="w-8 h-8 text-blue-600" />
-              Browse Categories
-            </h1>
-            <p className="text-gray-600 max-w-xl">
-              Explore all product categories and jump straight to listings that
-              match what you are looking for.
-            </p>
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Browse Categories
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                Find the category you want, then open matching products in one click.
+              </p>
+            </div>
+
+            <div className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 md:self-auto">
+              <span>{visibleCategories}</span>
+              <span className="text-slate-400">/</span>
+              <span>{totalCategories}</span>
+              <span className="text-slate-500">categories</span>
+            </div>
           </div>
 
-          {/* Search input */}
-          <div className="w-full md:w-80">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div className="mt-5 w-full md:max-w-md">
+            <label className="mb-2 block text-sm font-medium text-slate-600">
               Search categories
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="e.g. Phones, Laptops, Accessories"
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white/80 backdrop-blur-sm"
+                placeholder="Search by name"
+                className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                  aria-label="Clear category search"
+                >
+                  <CircleX className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Content */}
         {loading ? (
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 font-medium">Loading categories...</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <Loader2 className="mx-auto mb-3 h-10 w-10 animate-spin text-blue-600" />
+            <p className="text-sm font-medium text-slate-600">Loading categories...</p>
           </div>
         ) : error ? (
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <p className="text-red-600 font-semibold mb-2">{error}</p>
-            <p className="text-gray-600 text-sm">
+          <div className="rounded-2xl border border-red-100 bg-white p-8 text-center shadow-sm">
+            <p className="mb-1 text-base font-semibold text-red-600">{error}</p>
+            <p className="text-sm text-slate-600">
               Please check your connection or contact the administrator.
             </p>
           </div>
         ) : filteredCategories.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              No categories found
-            </h2>
-            <p className="text-gray-600">
-              Try clearing your search or come back later.
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <Package className="mx-auto mb-4 h-14 w-14 text-slate-400" />
+            <h2 className="mb-2 text-xl font-bold text-slate-900">No categories found</h2>
+            <p className="text-slate-600">Try clearing your search or come back later.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filteredCategories.map((category) => (
               <Link
                 key={category.id}
                 href={`/products?category=${category.id}`}
-                className="group bg-white/90 backdrop-blur-sm rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-blue-200 p-5 flex flex-col justify-between"
+                className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"
               >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                        <Tag className="w-5 h-5" />
-                      </div>
-                      <h2 className="font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white">
+                      <Tag className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold text-slate-900 transition group-hover:text-blue-700">
                         {category.name}
                       </h2>
+                      <p className="mt-0.5 text-xs text-slate-500">View products in this category</p>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    View all second-hand products in the {category.name}{" "}
-                    category.
-                  </p>
-                </div>
 
-                <div className="mt-5 flex items-center justify-between text-sm font-medium text-blue-600">
-                  <span className="flex items-center gap-1">
-                    <Package className="w-4 h-4" />
-                    View products
-                  </span>
-                  <span className="group-hover:translate-x-1 transition-transform">
-                    -&gt;
-                  </span>
+                  <div className="text-blue-600 transition group-hover:translate-x-0.5">
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
                 </div>
               </Link>
             ))}

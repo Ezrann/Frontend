@@ -1,22 +1,17 @@
 // Utility for Google OAuth login
 
 export async function handleGoogleLogin(googleUser: {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-}): Promise<{ success: boolean; message: string; token?: string }> {
+  credential: string;
+}): Promise<{ success: boolean; message: string; role?: string }> {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google-login`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          email: googleUser.email,
-          name: googleUser.name,
-          google_id: googleUser.id,
-          avatar: googleUser.picture || null,
+          credential: googleUser.credential,
         }),
       }
     );
@@ -30,30 +25,12 @@ export async function handleGoogleLogin(googleUser: {
       };
     }
 
-    // Save token to localStorage
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-      document.cookie = `token=${data.token}; path=/; max-age=${
-        7 * 24 * 60 * 60
-      }; SameSite=Lax`;
-    }
-
-    // Save role
-    if (data.role) {
-      const roleString = String(data.role).trim();
-      localStorage.setItem("role", roleString);
-      document.cookie = `role=${roleString}; path=/; max-age=${
-        7 * 24 * 60 * 60
-      }; SameSite=Lax`;
-    }
-
-    // Dispatch event for navbar update
-    window.dispatchEvent(new Event("localStorageChange"));
+    window.dispatchEvent(new Event("authChange"));
 
     return {
       success: true,
       message: "Google login successful",
-      token: data.token,
+      role: data.role,
     };
   } catch (error) {
     console.error("Google login error:", error);
@@ -138,8 +115,19 @@ declare global {
     google?: {
       accounts: {
         id: {
-          initialize: (config: any) => void;
-          renderButton: (element: HTMLElement | null, options: any) => void;
+          initialize: (config: {
+            client_id: string;
+            callback: (response: CredentialResponse) => void;
+          }) => void;
+          renderButton: (
+            element: HTMLElement | null,
+            options: {
+              theme: string;
+              size: string;
+              width: number;
+              text: string;
+            }
+          ) => void;
           prompt: (onError: () => void) => void;
         };
       };

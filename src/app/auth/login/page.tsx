@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeClosed, Lock, Mail, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import {
-  decodeGoogleResponse,
   handleGoogleLogin,
   initializeGoogleSignIn,
   loadGoogleScript,
@@ -25,18 +24,8 @@ export default function LoginPage() {
   useEffect(() => {
     async function handleGoogleSignIn(response: { credential: string }) {
       try {
-        const decoded = decodeGoogleResponse(response.credential);
-
-        if (!decoded) {
-          toast.error(t("auth.decodeFailed"));
-          return;
-        }
-
         const result = await handleGoogleLogin({
-          id: decoded.id,
-          email: decoded.email,
-          name: decoded.name,
-          picture: decoded.picture,
+          credential: response.credential,
         });
 
         if (!result.success) {
@@ -47,7 +36,7 @@ export default function LoginPage() {
         toast.success(t("auth.googleLoginSuccess"));
 
         window.setTimeout(() => {
-          const role = localStorage.getItem("role")?.toLowerCase() || "user";
+          const role = result.role?.toLowerCase() || "user";
           router.push(role === "admin" ? "/admin/dashboard" : "/");
         }, 1000);
       } catch (error) {
@@ -77,6 +66,7 @@ export default function LoginPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -87,24 +77,17 @@ export default function LoginPage() {
         return;
       }
 
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        document.cookie = `token=${data.token}; path=/; max-age=${
-          7 * 24 * 60 * 60
-        }; SameSite=Lax`;
-      }
-
       let userRole =
         data.role ||
         data.user?.role ||
         data.data?.role ||
         data.user?.user?.role;
 
-      if (!userRole && data.token) {
+      if (!userRole) {
         try {
           const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+            credentials: "include",
             headers: {
-              Authorization: `Bearer ${data.token}`,
               "Content-Type": "application/json",
             },
           });
@@ -119,12 +102,7 @@ export default function LoginPage() {
       }
 
       if (userRole) {
-        const roleString = String(userRole).trim();
-        localStorage.setItem("role", roleString);
-        document.cookie = `role=${roleString}; path=/; max-age=${
-          7 * 24 * 60 * 60
-        }; SameSite=Lax`;
-        window.dispatchEvent(new Event("localStorageChange"));
+        window.dispatchEvent(new Event("authChange"));
       }
 
       toast.success(t("auth.loginSuccess"));
@@ -147,10 +125,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dbeafe,_#f8fafc_55%)] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_30px_80px_rgba(30,64,175,0.15)] lg:grid-cols-[1.08fr_0.92fr]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe,#f8fafc_55%)] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-4xl border border-white/70 bg-white shadow-[0_30px_80px_rgba(30,64,175,0.15)] lg:grid-cols-[1.08fr_0.92fr]">
         <section className="relative hidden overflow-hidden bg-[linear-gradient(160deg,#1d4ed8_0%,#2563eb_42%,#60a5fa_100%)] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_35%),radial-gradient(circle_at_bottom_left,_rgba(191,219,254,0.28),_transparent_30%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(191,219,254,0.28),transparent_30%)]" />
 
           <div className="relative max-w-md">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium backdrop-blur-sm">
@@ -169,7 +147,7 @@ export default function LoginPage() {
           <div className="relative mx-auto flex w-full max-w-md items-center justify-center">
             <div className="absolute inset-x-10 top-6 h-40 rounded-full bg-white/15 blur-3xl" />
             <Image
-              src="/images/image.png"
+              src="/images/hero.png"
               alt="Marketplace illustration"
               width={520}
               height={520}
@@ -286,7 +264,9 @@ export default function LoginPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                <div id="google-login-button" className="w-full" />
+                <div className="flex justify-center">
+                  <div id="google-login-button" />
+                </div>
               </div>
             </form>
 
